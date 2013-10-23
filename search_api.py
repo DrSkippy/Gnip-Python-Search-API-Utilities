@@ -37,15 +37,18 @@ class GnipSearchAPI:
         twitter_parser.add_argument("-n", "--results-max", dest="max", default=100, 
                 help="Maximum results to return (default 100)")
         self.options = twitter_parser.parse_args()
-        self.twitter_parser = TwacsCSV(",",False, True, False, True, False, False, False)
+        #self.twitter_parser = TwacsCSV(",",False, True, False, True, False, False, False)
+        self.twitter_parser = TwacsCSV(",", False, False, True, False, True, False, False, False)
         DATE_INDEX = 1
         TEXT_INDEX = 2
         LINKS_INDEX = 3
         USER_NAME_INDEX = 7
         space_tokenizer = False
+        char_upper_cutoff=11
         if self.options.use_case.startswith("links"):
+            char_upper_cutoff=100
             space_tokenizer = True
-        self.freq = SimpleNGrams(charUpperCutoff=11, spaceTokenizer=space_tokenizer)
+        self.freq = SimpleNGrams(charUpperCutoff=char_upper_cutoff, spaceTokenizer=space_tokenizer)
         if self.options.use_case.startswith("user"):
             self.index = USER_NAME_INDEX
         elif self.options.use_case.startswith("wordc"):
@@ -125,11 +128,18 @@ class GnipSearchAPI:
             res.append("-"*WIDTH)
         elif self.options.use_case.startswith("json"):
             res.extend(self.doc)
-        else:
+        elif self.options.use_case.startswith("word") or self.options.use_case.startswith("user"):
             res.append("%22s -- %10s     %8s (%d)"%( "terms", "mentions", "activities", self.res_cnt))
             res.append("-"*WIDTH)
             for x in self.freq.get_tokens(self.token_list_size):
                 res.append("%22s -- %4d  %5.2f%% %4d  %5.2f%%"%(x[4], x[0], x[1]*100., x[2], x[3]*100.))
+            res.append("-"*WIDTH)
+        else:
+            res[-1]+=u"-"*WIDTH
+            res.append("%100s -- %10s     %8s (%d)"%("links", "mentions", "activities", self.res_cnt))
+            res.append("-"*2*WIDTH)
+            for x in self.freq.get_tokens(self.token_list_size):
+                res.append("%100s -- %4d  %5.2f%% %4d  %5.2f%%"%(x[4], x[0], x[1]*100., x[2], x[3]*100.))
             res.append("-"*WIDTH)
         return "\n".join(res)
 
