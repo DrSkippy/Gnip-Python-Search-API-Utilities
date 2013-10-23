@@ -37,7 +37,6 @@ class GnipSearchAPI:
         twitter_parser.add_argument("-n", "--results-max", dest="max", default=100, 
                 help="Maximum results to return (default 100)")
         self.options = twitter_parser.parse_args()
-        #self.twitter_parser = TwacsCSV(",",False, True, False, True, False, False, False)
         self.twitter_parser = TwacsCSV(",", False, False, True, False, True, False, False, False)
         DATE_INDEX = 1
         TEXT_INDEX = 2
