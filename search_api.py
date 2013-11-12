@@ -1,12 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
-# @DrSkippy27
+__author__="Scott Hendrickson, Josh Montague" 
+
 import sys
 import requests
 import json
 import codecs
 import argparse
 import datetime
+import re
 
 from acscsv.twacscsv import TwacsCSV
 from simple_n_grams.simple_n_grams import SimpleNGrams
@@ -27,9 +29,20 @@ class GnipSearchAPI:
                 help="Use case for this search.")
         twitter_parser.add_argument("-f", "--filter", dest="filter", default="from:drskippy27 OR from:gnip",
                 help="PowerTrack filter rule (See: http://support.gnip.com/customer/portal/articles/901152-powertrack-operators)")
-        twitter_parser.add_argument("-s", "--stream-url", dest="stream_url", 
+        twitter_parser.add_argument("-l", "--stream-url", dest="stream_url", 
                 default="https://search.gnip.com/accounts/shendrickson/publishers/twitter/search/wayback.json",
                 help="Url of search endpoint. (See your Gnip console.)")
+        twitter_parser.add_argument("-s", "--start-date", dest="start", 
+                #default="2013-01-01T01:01",
+                default=None,
+                help="Start of datetime window, format 'YYYY-mm-DDTHH:MM' (default: 30 days ago)")
+        twitter_parser.add_argument("-e", "--end-date", dest="end", 
+                default=None,
+                help="End of datetime window, format 'YYYY-mm-DDTHH:MM' (default: none)")
+#        # query test option
+#        twitter_parser.add_argument("-q", "--query", dest="query", action="store_true", 
+#                default=False, help="View API query")
+#        #
         twitter_parser.add_argument("-u", "--user-name", dest="user", default="shendrickson@gnip.com",
                 help="User name")
         twitter_parser.add_argument("-p", "--password", dest="pwd", 
@@ -44,6 +57,7 @@ class GnipSearchAPI:
         USER_NAME_INDEX = 7
         space_tokenizer = False
         char_upper_cutoff=11
+        #
         if self.options.use_case.startswith("links"):
             char_upper_cutoff=100
             space_tokenizer = True
@@ -56,6 +70,29 @@ class GnipSearchAPI:
             self.index = DATE_INDEX
         elif self.options.use_case.startswith("link"):
             self.index = LINKS_INDEX
+        # time window parsing 
+        timeRE = re.compile("[0-9]{4}-[0-9]{2}-[0-9]{2}.[0-9]{2}:[0-9]{2}")
+        input_dt_fmt = '%Y-%m-%dT%H:%M'
+        query_dt_fmt = '%Y%m%d%H%M'
+        if self.options.start:
+            dt = re.search(timeRE, self.options.start)
+            if not dt:
+                print >> sys.stderr, "Error. Invalid start-date format: %s \n"%str(self.options.start)
+                sys.exit()    
+            else:
+                # from '2013-11-08T15:18' to '201311081518' 
+                tmp = datetime.datetime.strptime(dt.group(0), input_dt_fmt)
+                self.fromDate = tmp.strftime(query_dt_fmt) 
+        if self.options.end:
+            # do we make an n=10 request to find out the server time? 
+            dt = re.search(timeRE, self.options.end)
+            if not dt:
+                print >> sys.stderr, "Error. Invalid end-date format: %s \n"%str(self.options.end)
+                sys.exit()
+            else:
+                tmp = datetime.datetime.strptime(dt.group(0), input_dt_fmt)
+                self.toDate = tmp.strftime(query_dt_fmt) 
+
 
     def req(self):
         try:
@@ -77,6 +114,10 @@ class GnipSearchAPI:
             tacs =  json.loads(doc)
             if "results" in tacs:
                 acs = tacs["results"]
+            if "error" in tacs:
+                print >> sys.stderr, "Error, invalid request"
+                print >> sys.stderr, "Query: %s"%self.rule_payload
+                print >> sys.stderr, "Response: %s"%doc
         except ValueError:
             print >> sys.stderr, "Error, results not parsable"
             print >> sys.stderr, doc
@@ -85,6 +126,15 @@ class GnipSearchAPI:
 
     def __call__(self):
         self.rule_payload = {'q':self.options.filter, 'max': int(self.options.max)}
+        if self.options.start:
+            self.rule_payload["fromDate"] = self.fromDate
+        if self.options.end:
+            self.rule_payload["toDate"] = self.toDate
+#        if self.options.query:
+#            print >>sys.stdout, "Constructed API query: "
+#            print >>sys.stdout, "%s\n"%self.rule_payload
+#            sys.exit()
+#        #
         self.oldest_t = datetime.datetime.utcnow()
         start_t = self.oldest_t
         self.doc = []
@@ -127,6 +177,9 @@ class GnipSearchAPI:
             res.append("-"*WIDTH)
         elif self.options.use_case.startswith("json"):
             res.extend(self.doc)
+            #
+            #sys.stderr.write('self.doc: %s \n'%str(self.doc))
+            #
         elif self.options.use_case.startswith("word") or self.options.use_case.startswith("user"):
             res.append("%22s -- %10s     %8s (%d)"%( "terms", "mentions", "activities", self.res_cnt))
             res.append("-"*WIDTH)
