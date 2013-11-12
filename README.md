@@ -2,19 +2,19 @@ Gnip-Python-Search-API-Utilities
 ================================
 
 
-Install with 
-   pip install gapi
+Install with `pip install gapi`
 
-This package includes 2 utilities:
- - Simple search api interactions
+This package includes two utilities:
+ - Simple Gnip Search API interactions
  - Paging back to 30 days for 1 or more filters (WARNING: this will make many API requests very quickly!)
 
 
 ## Search API
+
 <pre>
-> ./search_api.py -h
-usage: search_api.py [-h] [-f FILTER] [-s STREAM_URL] [-u USER] [-p PWD]
-                     [-n MAX]
+$ ./search_api.py -h
+usage: search_api.py [-h] [-f FILTER] [-l STREAM_URL] [-s START] [-e END] [-q]
+                     [-u USER] [-p PWD] [-n MAX]
                      USE_CASE
 
 GnipSearch supports the following use cases: ['json', 'wordcount', 'users',
@@ -28,21 +28,26 @@ optional arguments:
   -f FILTER, --filter FILTER
                         PowerTrack filter rule (See: http://support.gnip.com/c
                         ustomer/portal/articles/901152-powertrack-operators)
-  -s STREAM_URL, --stream-url STREAM_URL
+  -l STREAM_URL, --stream-url STREAM_URL
                         Url of search endpoint. (See your Gnip console.)
+  -s START, --start-date START
+                        Start of datetime window, format 'YYYY-mm-DDTHH:MM'
+                        (default: 30 days ago)
+  -e END, --end-date END
+                        End of datetime window, format 'YYYY-mm-DDTHH:MM'
+                        [Omit for most recent activities] (default: none)
+  -q, --query           View API query (no data)
   -u USER, --user-name USER
                         User name
   -p PWD, --password PWD
                         Password
   -n MAX, --results-max MAX
                         Maximum results to return (default 100)
-
 </pre>
 
 
-
 <pre>
-> ./search_api.py -p XXXX -f"from:drskippy27" users
+$ ./search_api.py -p XXXX -f"from:drskippy27" users
 ------------------------------------------------------------
                  terms --   mentions     activities (55)
 ------------------------------------------------------------
@@ -50,21 +55,16 @@ optional arguments:
 ------------------------------------------------------------
 
 
-> ./search_api.py -p XXXX -f"from:drskippy27" rate
+$ ./search_api.py -p XXXX -f"from:drskippy27" rate
 ------------------------------------------------------------
    PowerTrack Rule: "from:drskippy27"
 Oldest Tweet (UTC): 2013-08-29 14:24:51
          Now (UTC): 2013-09-27 22:27:21
          55 Tweets:  0.078 Tweets/Hour
 ------------------------------------------------------------
-Scott-Hendricksons-MacBook-Pro ~/IdeaProjects/Gnip-Python-Search-API-Utilities> ./search_api.py -p XXXX -f"from:drskippy27" wordcounts
-usage: search_api.py [-h] [-f FILTER] [-s STREAM_URL] [-u USER] [-p PWD]
-                     [-n MAX]
-                     USE_CASE
-search_api.py: error: argument USE_CASE: invalid choice: 'wordcounts' (choose from 'json', 'wordcount', 'users', 'rate', 'links')
 
 
-> ./search_api.py -p XXXX -f"from:drskippy27" wordcount
+$ ./search_api.py -p XXXX -f"from:drskippy27" wordcount
 ------------------------------------------------------------
                  terms --   mentions     activities (55)
 ------------------------------------------------------------
@@ -112,7 +112,7 @@ search_api.py: error: argument USE_CASE: invalid choice: 'wordcounts' (choose fr
 
 
 
-> ./search_api.py -p XXXX -f"from:drskippy27" json
+$ ./search_api.py -p XXXX -f"from:drskippy27" json
 ------------------------------------------------------------
 {"body": "RT @drewconway: Python + Hadoop http://t.co/Jrof4dIxDT awww, that snake and elephant love each other!", "retweetCount": 10, "generator": {"link": "http://www.tweetdeck.com", "displayName": "TweetDeck"}, "twitter_filter_level": "medium", "gnip": {"language": {"value": "en"}, "urls": [{"url": "http://t.co/Jrof4dIxDT", "expanded_url": "http://blog.mortardata.com/post/62334142398/hadoop-python-pig-trunk?utm_content=buffer8aaed&utm_source=buffer&utm_medium=twitter&utm_campaign=Buffer"}], "profileLocations": [{"displayName": "Brighton, Colorado, United States", "address": {"country": "United States", "region": "Colorado", "countryCode": "US", "locality": "Brighton"}, "geo": {"type": "point", "coordinates": [-104.82053, 39.98526]}, "objectType": "place"}]}, "favoritesCount": 0, "object": {"body": "Python + Hadoop http://t.co/Jrof4dIxDT awww, that snake and elephant love each other!", "generator": {"link": "http://tapbots.com/software/tweetbot/mac", "displayName": "Tweetbot for Mac"},
 ...
@@ -121,7 +121,7 @@ search_api.py: error: argument USE_CASE: invalid choice: 'wordcounts' (choose fr
 ## Paged Search
 
 <pre>
-> echo "Nothing" | ./paged_search_api.py -h
+$ echo "Nothing" | ./paged_search_api.py -h
 usage: paged_search_api.py [-h] [-s STREAM_URL] [-f] [-u USER] [-p PWD]
                            [-n MAX]
 
@@ -143,11 +143,11 @@ optional arguments:
 
 
 <pre>
-> cat rules.txt | ./paged_search_api.py -p XXXX 
+$ cat rules.txt | ./paged_search_api.py -p XXXX 
 Now retrieving 500 results up to 2013-09-03 16:38:02 (UTC)...
 [{"body": "RT @CloudElements1: Interested in social media &amp; data streaming, HTTP streaming, geo-referencing and live code examples? Meetup w/ @gnip ht\u2026", "retweetCount": 1, "generator": {"link": "http://www.tweetdeck.com", "displayName": "TweetDeck"}, "twitter_filter_level": "medium", "gnip": {"language": {"value": "en"}, "urls": [{"url": "http://t.co/jhASyTC1mN", "expanded_url": "http://www.meetup.com/All-things-Cloud-PaaS-SaaS-PaaS-XaaS/events/124584092/"}], "profileLocations": [{"displayName": "Boulder, Colorado, United States",
 ...
 </pre>
 
-or use the -f flag to write to file.
+or use the `-f` flag to write to file.
 
