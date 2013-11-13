@@ -121,7 +121,7 @@ class GnipSearchAPI:
         return acs
 
     def __call__(self):
-        self.rule_payload = {'q':self.options.filter, 'max': int(self.options.max)}
+        self.rule_payload = {'query':self.options.filter, 'maxResults': int(self.options.max)}
         if self.options.start:
             self.rule_payload["fromDate"] = self.fromDate
         if self.options.end:
@@ -131,11 +131,12 @@ class GnipSearchAPI:
             print >>sys.stderr, self.rule_payload
             sys.exit() 
         #
-        self.oldest_t = datetime.datetime.utcnow()
-        self.newest_t = datetime.datetime(year=1900,month=01,day=01)
         self.doc = []
         self.res_cnt = 0
         self.delta_t = 1    # keeps non-'rate' use-cases from crashing 
+        # default delta_t = 30d & search only goes back 30 days
+        self.oldest_t = datetime.datetime.utcnow() - datetime.timedelta(days=30)
+        self.newest_t = datetime.datetime.utcnow()
         for rec in self.parse_JSON(self.req()):
             self.res_cnt += 1
             if self.options.use_case.startswith("rate"):
@@ -143,7 +144,7 @@ class GnipSearchAPI:
                 t = datetime.datetime.strptime(t_str,"%Y-%m-%dT%H:%M:%S.000Z")
                 if t < self.oldest_t:
                     self.oldest_t = t
-                elif t > self.newest_t:
+                if t > self.newest_t:
                     self.newest_t = t
                 self.delta_t = (self.newest_t - self.oldest_t).total_seconds()/60.
             elif self.options.use_case.startswith("links"):
