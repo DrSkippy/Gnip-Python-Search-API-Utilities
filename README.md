@@ -121,7 +121,7 @@ $ ./search_api.py -p XXXX -f"from:drskippy27" json
 ## Paged Search
 
 <pre>
-> echo "Nothing" | ./paged_search_api.py -h
+$ echo "Nothing" | ./paged_search_api.py -h
 usage: paged_search_api.py [-h] [-s STREAM_URL] [-f] [-u USER] [-p PWD]
                            [-n MAX]
 
@@ -143,7 +143,7 @@ optional arguments:
 
 
 <pre>
-> cat rules.txt | ./paged_search_api.py -p XXXX 
+$ cat rules.txt | ./paged_search_api.py -p XXXX 
 Now retrieving 500 results up to 2013-09-03 16:38:02 (UTC)...
 [{"body": "RT @CloudElements1: Interested in social media &amp; data streaming, HTTP streaming, geo-referencing and live code examples? Meetup w/ @gnip ht\u2026", "retweetCount": 1, "generator": {"link": "http://www.tweetdeck.com", "displayName": "TweetDeck"}, "twitter_filter_level": "medium", "gnip": {"language": {"value": "en"}, "urls": [{"url": "http://t.co/jhASyTC1mN", "expanded_url": "http://www.meetup.com/All-things-Cloud-PaaS-SaaS-PaaS-XaaS/events/124584092/"}], "profileLocations": [{"displayName": "Boulder, Colorado, United States",
 ...
