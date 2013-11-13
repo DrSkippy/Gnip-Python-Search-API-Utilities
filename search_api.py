@@ -135,6 +135,7 @@ class GnipSearchAPI:
         self.newest_t = datetime.datetime(year=1900,month=01,day=01)
         self.doc = []
         self.res_cnt = 0
+        self.delta_t = 1    # keeps non-'rate' use-cases from crashing 
         for rec in self.parse_JSON(self.req()):
             self.res_cnt += 1
             if self.options.use_case.startswith("rate"):
