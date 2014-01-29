@@ -121,7 +121,7 @@ class GnipSearchAPI:
         return acs
 
     def __call__(self):
-        self.rule_payload = {'query':self.options.filter, 'maxResults': int(self.options.max)}
+        self.rule_payload = {'query':self.options.filter, 'maxResults': int(self.options.max), 'publisher':'twitter'}
         if self.options.start:
             self.rule_payload["fromDate"] = self.fromDate
         if self.options.end:
