@@ -33,7 +33,7 @@ class GnipSearchAPI:
         twitter_parser.add_argument("-f", "--filter", dest="filter", default="from:jrmontag OR from:gnip",
                 help="PowerTrack filter rule (See: http://support.gnip.com/customer/portal/articles/901152-powertrack-operators)")
         twitter_parser.add_argument("-l", "--stream-url", dest="stream_url", 
-                default="https://search.gnip.com/accounts/shendrickson/publishers/twitter/search/wayback.json",
+                default="https://search.gnip.com/accounts/shendrickson/search/wayback.json",
                 help="Url of search endpoint. (See your Gnip console.)")
         twitter_parser.add_argument("-c", "--count", dest="csv_count", action="store_true", 
                 default=False,
@@ -130,7 +130,6 @@ class GnipSearchAPI:
         return acs
 
     def __call__(self):
-        #self.rule_payload = {'query':self.options.filter, 'maxResults': int(self.options.max)}
         self.rule_payload = {'query':self.options.filter, 'maxResults': int(self.options.max), 'publisher': 'twitter'}
         if self.options.start:
             self.rule_payload["fromDate"] = self.fromDate
