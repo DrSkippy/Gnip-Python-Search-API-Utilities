@@ -12,12 +12,7 @@ This package includes two utilities:
 ## Search API
 
 <pre>
-$ ./search_api.py 
-usage: search_api.py [-h] [-f FILTER] [-l STREAM_URL] [-c] [-s START] [-e END]
-                     [-q] [-u USER] [-p PWD] [-n MAX]
-                     USE_CASE
-search_api.py: error: too few arguments
-jmontague:~/gnip/Gnip-Python-Search-API-Utilities$ ./search_api.py -h
+$ ./search_api.py -h
 usage: search_api.py [-h] [-f FILTER] [-l STREAM_URL] [-c] [-s START] [-e END]
                      [-q] [-u USER] [-p PWD] [-n MAX]
                      USE_CASE
