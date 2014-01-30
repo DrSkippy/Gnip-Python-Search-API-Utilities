@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/Users/jmontague/.virtualenvs/data/bin/python
 # -*- coding: UTF-8 -*-
 __author__="Scott Hendrickson, Josh Montague" 
 
@@ -17,9 +17,12 @@ reload(sys)
 sys.stdout = codecs.getwriter('utf-8')(sys.stdout)
 sys.stdin = codecs.getreader('utf-8')(sys.stdin)
 
+# formatter of data from API 
+TIME_FMT = "%Y%m%d%H%M"
+
 class GnipSearchAPI:
 
-    USE_CASES = ["json", "wordcount","users", "rate", "links"]
+    USE_CASES = ["json", "wordcount","users", "rate", "links", "timeline"]
     
     def __init__(self, token_list_size=20):
         self.token_list_size = int(token_list_size)
@@ -27,11 +30,14 @@ class GnipSearchAPI:
                 description="GnipSearch supports the following use cases: %s"%str(self.USE_CASES))
         twitter_parser.add_argument("use_case", metavar= "USE_CASE", choices=self.USE_CASES, 
                 help="Use case for this search.")
-        twitter_parser.add_argument("-f", "--filter", dest="filter", default="from:drskippy27 OR from:gnip",
+        twitter_parser.add_argument("-f", "--filter", dest="filter", default="from:jrmontag OR from:gnip",
                 help="PowerTrack filter rule (See: http://support.gnip.com/customer/portal/articles/901152-powertrack-operators)")
         twitter_parser.add_argument("-l", "--stream-url", dest="stream_url", 
                 default="https://search.gnip.com/accounts/shendrickson/publishers/twitter/search/wayback.json",
                 help="Url of search endpoint. (See your Gnip console.)")
+        twitter_parser.add_argument("-c", "--count", dest="csv_count", action="store_true", 
+                default=False,
+                help="Return comma-separated 'date,counts' when using a counts.json endpoint.")
         twitter_parser.add_argument("-s", "--start-date", dest="start", 
                 default=None,
                 help="Start of datetime window, format 'YYYY-mm-DDTHH:MM' (default: 30 days ago)")
@@ -40,7 +46,7 @@ class GnipSearchAPI:
                 help="End of datetime window, format 'YYYY-mm-DDTHH:MM' [Omit for most recent activities] (default: none)")
         twitter_parser.add_argument("-q", "--query", dest="query", action="store_true", 
                 default=False, help="View API query (no data)")
-        twitter_parser.add_argument("-u", "--user-name", dest="user", default="shendrickson@gnip.com",
+        twitter_parser.add_argument("-u", "--user-name", dest="user", default="jmontague@gnip.com",
                 help="User name")
         twitter_parser.add_argument("-p", "--password", dest="pwd", 
                 help="Password")
@@ -58,7 +64,7 @@ class GnipSearchAPI:
         if self.options.use_case.startswith("links"):
             char_upper_cutoff=100
             space_tokenizer = True
-        self.freq = SimpleNGrams(charUpperCutoff=char_upper_cutoff, spaceTokenizer=space_tokenizer)
+        self.freq = SimpleNGrams(charUpperCutoff=char_upper_cutoff, space_tokenizer=space_tokenizer)
         if self.options.use_case.startswith("user"):
             self.index = USER_NAME_INDEX
         elif self.options.use_case.startswith("wordc"):
@@ -67,6 +73,9 @@ class GnipSearchAPI:
             self.index = DATE_INDEX
         elif self.options.use_case.startswith("link"):
             self.index = LINKS_INDEX
+        elif self.options.use_case.startswith("time"):
+            if not self.options.stream_url.endswith("counts.json"): 
+                self.options.stream_url = self.options.stream_url[:-5] + "/counts.json"
         timeRE = re.compile("([0-9]{4}).([0-9]{2}).([0-9]{2}).([0-9]{2}):([0-9]{2})")
         if self.options.start:
             dt = re.search(timeRE, self.options.start)
@@ -121,7 +130,8 @@ class GnipSearchAPI:
         return acs
 
     def __call__(self):
-        self.rule_payload = {'query':self.options.filter, 'maxResults': int(self.options.max)}
+        #self.rule_payload = {'query':self.options.filter, 'maxResults': int(self.options.max)}
+        self.rule_payload = {'query':self.options.filter, 'maxResults': int(self.options.max), 'publisher': 'twitter'}
         if self.options.start:
             self.rule_payload["fromDate"] = self.fromDate
         if self.options.end:
@@ -157,6 +167,8 @@ class GnipSearchAPI:
                     self.freq.add("NoLinks")
             elif self.options.use_case.startswith("json"):
                 self.doc.append(json.dumps(rec))
+            elif self.options.use_case.startswith("time"):
+                self.doc.append(rec)
             else:
                 self.freq.add(self.twitter_parser.procRecordToList(rec)[self.index])
         return self
@@ -184,6 +196,11 @@ class GnipSearchAPI:
             for x in self.freq.get_tokens(self.token_list_size):
                 res.append("%22s -- %4d  %5.2f%% %4d  %5.2f%%"%(x[4], x[0], x[1]*100., x[2], x[3]*100.))
             res.append("-"*WIDTH)
+        elif self.options.use_case.startswith("time"):
+            if self.options.csv_count:
+                res = ["{:%Y-%m-%dT%H:%M:%S},{}".format(datetime.datetime.strptime(x["timePeriod"], TIME_FMT), x["count"]) for x in self.doc]
+            else:
+                res = [json.dumps({"results": self.doc})] 
         else:
             res[-1]+=u"-"*WIDTH
             res.append("%100s -- %10s     %8s (%d)"%("links", "mentions", "activities", self.res_cnt))
