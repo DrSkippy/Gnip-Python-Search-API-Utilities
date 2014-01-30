@@ -13,12 +13,12 @@ This package includes two utilities:
 
 <pre>
 $ ./search_api.py -h
-usage: search_api.py [-h] [-f FILTER] [-l STREAM_URL] [-s START] [-e END] [-q]
-                     [-u USER] [-p PWD] [-n MAX]
+usage: search_api.py [-h] [-f FILTER] [-l STREAM_URL] [-c] [-s START] [-e END]
+                     [-q] [-u USER] [-p PWD] [-n MAX]
                      USE_CASE
 
 GnipSearch supports the following use cases: ['json', 'wordcount', 'users',
-'rate', 'links']
+'rate', 'links', 'timeline']
 
 positional arguments:
   USE_CASE              Use case for this search.
@@ -30,6 +30,8 @@ optional arguments:
                         ustomer/portal/articles/901152-powertrack-operators)
   -l STREAM_URL, --stream-url STREAM_URL
                         Url of search endpoint. (See your Gnip console.)
+  -c, --count           Return comma-separated 'date,counts' when using a
+                        counts.json endpoint.
   -s START, --start-date START
                         Start of datetime window, format 'YYYY-mm-DDTHH:MM'
                         (default: 30 days ago)
@@ -45,7 +47,6 @@ optional arguments:
                         Maximum results to return (default 100)
 </pre>
 
-
 <pre>
 $ ./search_api.py -p XXXX -f"from:drskippy27" users
 ------------------------------------------------------------
@@ -54,7 +55,9 @@ $ ./search_api.py -p XXXX -f"from:drskippy27" users
             drskippy27 --   55  100.00%   55  100.00%
 ------------------------------------------------------------
 
+</pre>
 
+<pre>
 $ ./search_api.py -p XXXX -f"from:drskippy27" rate
 ------------------------------------------------------------
    PowerTrack Rule: "from:drskippy27"
@@ -62,8 +65,9 @@ Oldest Tweet (UTC): 2013-08-29 14:24:51
          Now (UTC): 2013-09-27 22:27:21
          55 Tweets:  0.078 Tweets/Hour
 ------------------------------------------------------------
+</pre>
 
-
+<pre>
 $ ./search_api.py -p XXXX -f"from:drskippy27" wordcount
 ------------------------------------------------------------
                  terms --   mentions     activities (55)
@@ -109,12 +113,23 @@ $ ./search_api.py -p XXXX -f"from:drskippy27" wordcount
            jud valeski --    1   0.22%    1   1.82%
            tshirt didn --    1   0.22%    1   1.82%
 ------------------------------------------------------------
+</pre>
+<pre>
+$ ./search_api.py -pXXX -f"from:jrmontag" -s"2014-01-01T00:00" -e"2014-01-15T00:00" json
+{"body": "Bring on the #sochi #olympics. @gnip now delivering data from Russia's biggest social network. http://t.co/nUFMC8GcTC", "retweetCount": 0, "generator": {"link": "https://about.twitter.com/products/tweetdeck", "displayName": "TweetDeck"}, "twitter_filter_level": "medium", "gnip": {"language": {"value": "en"}, "urls": [{"url": "http://t.co/nUFMC8GcTC", "expanded_status": 200, "expanded_url": "http://adage.com/abstract?article_id=291068"}], "profileLocations": [{"displayName": "Boulder, Colorado, United States", "address": {"country": "United States", "region": "Colorado", "subRegion": "Boulder County", "countryCode": "US", "locality": "Boulder"}, "geo": {"type": "point", "coordinates": [-105.27055, 40.01499]}, "objectType": "place"}]}, "favoritesCount": 0, "object": {"postedTime": "2014-01-14T19:14:58.000Z", "summary": "Bring on the #sochi #olympics. @gnip now delivering data from Russia's biggest social network. http://t.co/nUFMC8GcTC", "link": "http://twitter.com/jrmontag/statuses/423171400799506432", "id": "object:search.twitter.com,2005:423171400799506432", "objectType": "note"}, "actor": {"preferredUsername": "jrmontag", "displayName": "Josh", "links": [{"href": "http://about.me/joshmontague", "rel": "me"}], "twitterTimeZone": "Mountain Time (US & Canada)", "image": "https://pbs.twimg.com/profile_images/378800000733631857/ae9fe362605ca63c1acbb93f1778592f_normal.jpeg", "verified": false, "location": {"displayName": "Boulder / Golden", "objectType": "place"}, "statusesCount": 29789, "summary": "data @gnip \r\n(and other stuff!)", "languages": ["en"], "utcOffset": "-25200", "link": "http://www.twitter.com/jrmontag", "followersCount": 1806, "favoritesCount": 568, "friendsCount": 1987, "listedCount": 161, "postedTime": "2009-06-15T20:33:22.000Z", "id": "id:twitter.com:47436444", "objectType": "person"}, "twitter_lang": "en", "twitter_entities": {"symbols": [], "user_mentions": [{"id": 16958875, "indices": [31, 36], "id_str": "16958875", "screen_name": "gnip", "name": "Gnip, Inc."}], "hashtags": [{"indices": [13, 19], "text": "sochi"}, {"indices": [20, 29], "text": "olympics"}], "urls": [{"url": "http://t.co/nUFMC8GcTC", "indices": [95, 117], "expanded_url": "http://bit.ly/1a4ycTy", "display_url": "bit.ly/1a4ycTy"}]}, "verb": "post", "link": "http://twitter.com/jrmontag/statuses/423171400799506432", "provider": {"link": "http://www.twitter.com", "displayName": "Twitter", "objectType": "service"}, "postedTime": "2014-01-14T19:14:58.000Z", "id": "tag:search.twitter.com,2005:423171400799506432", "objectType": "activity"}
+...
+</pre>
 
-
-
-$ ./search_api.py -p XXXX -f"from:drskippy27" json
-------------------------------------------------------------
-{"body": "RT @drewconway: Python + Hadoop http://t.co/Jrof4dIxDT awww, that snake and elephant love each other!", "retweetCount": 10, "generator": {"link": "http://www.tweetdeck.com", "displayName": "TweetDeck"}, "twitter_filter_level": "medium", "gnip": {"language": {"value": "en"}, "urls": [{"url": "http://t.co/Jrof4dIxDT", "expanded_url": "http://blog.mortardata.com/post/62334142398/hadoop-python-pig-trunk?utm_content=buffer8aaed&utm_source=buffer&utm_medium=twitter&utm_campaign=Buffer"}], "profileLocations": [{"displayName": "Brighton, Colorado, United States", "address": {"country": "United States", "region": "Colorado", "countryCode": "US", "locality": "Brighton"}, "geo": {"type": "point", "coordinates": [-104.82053, 39.98526]}, "objectType": "place"}]}, "favoritesCount": 0, "object": {"body": "Python + Hadoop http://t.co/Jrof4dIxDT awww, that snake and elephant love each other!", "generator": {"link": "http://tapbots.com/software/tweetbot/mac", "displayName": "Tweetbot for Mac"},
+<pre>
+$ ./search_api.py -pXXXX -f"bieber" -s"2014-01-20T00:00" -e"2014-01-25T00:00" timeline -c
+2014-01-20T00:00:00,9516
+2014-01-20T01:00:00,9879
+2014-01-20T02:00:00,9337
+2014-01-20T03:00:00,9983
+2014-01-20T04:00:00,10284
+2014-01-20T05:00:00,8306
+2014-01-20T06:00:00,6750
+2014-01-20T07:00:00,5245
 ...
 </pre>
 
