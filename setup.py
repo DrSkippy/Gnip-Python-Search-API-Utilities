@@ -2,7 +2,7 @@ from distutils.core import setup
 
 setup(
     name='gapi',
-    version='0.1.2',
+    version='0.1.4',
     author='Scott Hendrickson',
     author_email='scott@drskippy.net',
     packages=[],
@@ -12,7 +12,7 @@ setup(
     license='LICENSE.txt',
     description='Simple utilties to to explore the Gnip search API',
     install_requires=[
-        "gnacs > 0.5.0",
+        "gnacs > 0.7.0",
         "sngrams > 0.1.0"
         ]
     )
