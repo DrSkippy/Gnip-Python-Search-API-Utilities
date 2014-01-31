@@ -2,8 +2,8 @@ from distutils.core import setup
 
 setup(
     name='gapi',
-    version='0.1.4',
-    author='Scott Hendrickson',
+    version='0.2.0',
+    author='Scott Hendrickson, Josh Montague',
     author_email='scott@drskippy.net',
     packages=[],
     scripts=['search_api.py', 'paged_search_api.py'],
