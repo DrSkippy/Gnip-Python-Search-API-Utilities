@@ -38,6 +38,9 @@ class GnipSearchAPI:
         twitter_parser.add_argument("-c", "--count", dest="csv_count", action="store_true", 
                 default=False,
                 help="Return comma-separated 'date,counts' when using a counts.json endpoint.")
+        twitter_parser.add_argument("-b", "--bucket", dest="count_bucket", 
+                default="day", 
+                help="Bucket size for counts query. Options are day, hour, minute (default is 'day').")
         twitter_parser.add_argument("-s", "--start-date", dest="start", 
                 default=None,
                 help="Start of datetime window, format 'YYYY-mm-DDTHH:MM' (default: 30 days ago)")
@@ -76,6 +79,9 @@ class GnipSearchAPI:
         elif self.options.use_case.startswith("time"):
             if not self.options.stream_url.endswith("counts.json"): 
                 self.options.stream_url = self.options.stream_url[:-5] + "/counts.json"
+            if self.options.count_bucket not in ['day', 'minute', 'hour']:
+                print >> sys.stderr, "Error. Invalid count bucket: %s \n"%str(self.options.count_bucket)
+                sys.exit()
         timeRE = re.compile("([0-9]{4}).([0-9]{2}).([0-9]{2}).([0-9]{2}):([0-9]{2})")
         if self.options.start:
             dt = re.search(timeRE, self.options.start)
@@ -135,6 +141,8 @@ class GnipSearchAPI:
             self.rule_payload["fromDate"] = self.fromDate
         if self.options.end:
             self.rule_payload["toDate"] = self.toDate
+        if self.options.use_case.startswith("time"):
+            self.rule_payload["bucket"] = self.options.count_bucket
         if self.options.query:
             print >>sys.stderr, "API query:"
             print >>sys.stderr, self.rule_payload
