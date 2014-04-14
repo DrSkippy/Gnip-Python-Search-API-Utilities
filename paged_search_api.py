@@ -32,16 +32,23 @@ class PagedSearchAPI:
                 help="Password")
         twitter_parser.add_argument("-n", "--results-max", dest="max", default=500, 
                 help="Maximum results to return (default 500)")
-        self.options = twitter_parser.parse_args()
-        self.twitter_parser = TwacsCSV(",",False, True, False, True, False, False, False)
-        self.acs = []
+        twitter_parser.add_argument("-d", "--from date", dest="fromDate",  
+                help="yyyymmddhhmm")
+        twitter_parser.add_argument("-t", "--to date", dest="toDate",  
+                help="yyyymmddhhmm")
+        twitter_parser.add_argument("-z", "--publisher", dest="pub", default="twitter", 
+                help="twitter")
+
+        self.options = twitter_parser.parse_args() 
+        self.twitter_parser = TwacsCSV(",",False, True, False, True, False, False, False,False) 
         self.activities_returned = []
-        self.oldest = datetime.datetime.utcnow()
-        self.rule_payload = {'q':filter, 'max': int(self.options.max), 'toDate':None}
+        self.ts = datetime.datetime.utcnow()
+        self.rule_payload = {'q':filter, 'max': int(self.options.max), 'toDate':str(self.options.toDate),'fromDate':str(self.options.fromDate),'publisher':self.options.pub}
         self.page_count = 1
         self.name_munger(filter)
 
     def name_munger(self, f):
+        """creates a file name per rule"""
         f = re.sub(' +','_',f)
         f = f.replace(':','_')
         f = f.replace('"','_Q_')
@@ -50,12 +57,11 @@ class PagedSearchAPI:
         self.filename_prefix = f
 
     def req(self):
+        """Called from get_json - uses Session from requests"""
         try:
             s = requests.Session()
             s.headers = {'Accept-encoding': 'gzip'}
             s.auth = (self.options.user, self.options.pwd)
-            self.rule_payload["toDate"] = self.oldest.strftime("%Y%m%d%H%M")
-            #print self.rule_payload
             res = s.post(self.options.stream_url, data=json.dumps(self.rule_payload))
         except requests.exceptions.ConnectionError, e:
             print >> sys.stderr, "Error (%s). Exiting without results."%str(e)
@@ -63,10 +69,10 @@ class PagedSearchAPI:
         except requests.exceptions.HTTPError, e:
             print >> sys.stderr, "Error (%s). Exiting without results."%str(e)
             sys.exit()
-        #print res.text
         return res.text
 
     def parse_JSON(self, doc):
+        """stores results locally as timestamp_filename.json"""
         t_acs = []
         try:
             tacs =  json.loads(doc)
@@ -78,37 +84,42 @@ class PagedSearchAPI:
             print >> sys.stderr, "Error, results not parsable"
             print >> sys.stderr, doc
             sys.exit()
-        self.acs.extend(t_acs)
-        #
-        t_oldest = datetime.datetime.utcnow()
-        for x in self.acs:
-            tmp_t = datetime.datetime.strptime(x["postedTime"],"%Y-%m-%dT%H:%M:%S.000Z")
-            if tmp_t < t_oldest:
-                t_oldest = tmp_t
-        if t_oldest < self.oldest:
-            self.oldest = t_oldest
         if len(t_acs) > 0:
             if self.options.filename:
-                with open("./data/%s-%s.json"%(self.filename_prefix,  self.oldest.strftime("%Y%m%d%H%M")), "wb") as out:
-                    out.write(json.dumps(t_acs))
-                self.acs = []
+                local_storage="data/"
+                filename=local_storage+"{0}_{1}.json".format(str(datetime.datetime.utcnow().strftime("%Y%m%d%H%M%S")),str(self.filename_prefix))
+                with open(filename, "wb") as out:
+                    print >> sys.stderr, "(writing to file ...)"
+                    for item in t_acs:
+                        out.write(json.dumps(item)+"\n")
+            else:
+                for item in t_acs:
+                    print json.dumps(item)
+        else:
+            print >> sys.stderr, "no results returned for rule:{0}".format(str(self.rule_payload))
+        if "next" in tacs:
+            self.rule_payload["next"]=tacs["next"]
             return True
         else:
+            if "next" in self.rule_payload:
+                del self.rule_payload["next"]
             return False
 
     def get_json(self):
+        """Makes requests until "next" is not in the returned record"""
         while self.parse_JSON(self.req()):
-            print >> sys.stderr, "Now retrieving %d results up to %s (UTC)..."%(int(self.options.max), self.oldest) 
-        if self.acs == []:
-            return "(writing to file %s)"%self.filename_prefix
-        else:
-            return json.dumps(self.acs)
+            print >> sys.stderr, "Now retrieving %d results ..."%(int(self.options.max)) 
 
     def metrics(self):
-        return  str(self.oldest), self.page_count, float(sum(a.activities_returned))/a.page_count
+        return  self.page_count, float(sum(a.activities_returned))/a.page_count
 
 if __name__ == "__main__":
+    start = datetime.datetime.now()
+    print >> sys.stderr, "Local time:",str(start)
     for x in sys.stdin:
         a = PagedSearchAPI(x.strip())
-        print a.get_json()
+        a.get_json()
         print >> sys.stderr, a.metrics()
+    end =  datetime.datetime.now()
+    print >> sys.stderr, "Local time:", str(end), int((end-start).total_seconds()), sum(a.activities_returned)/float((end-start).total_seconds())        
+
