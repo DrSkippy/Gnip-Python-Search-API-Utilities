@@ -87,13 +87,14 @@ class PagedSearchAPI:
         if len(t_acs) > 0:
             if self.options.filename:
                 local_storage="data/"
+                filename=local_storage+"{0}_{1}.json".format(str(datetime.datetime.utcnow().strftime("%Y%m%d%H%M%S")),str(self.filename_prefix))
+                with open(filename, "wb") as out:
+                    print >> sys.stderr, "(writing to file ...)"
+                    for item in t_acs:
+                        out.write(json.dumps(item)+"\n")
             else:
-                local_storage=""
-            filename=local_storage+"{0}_{1}.json".format(str(datetime.datetime.utcnow().strftime("%Y%m%d%H%M%S")),str(self.filename_prefix))
-            with open(filename, "wb") as out:
-                print >> sys.stderr, "(writing to file ...)"
                 for item in t_acs:
-                    out.write(json.dumps(item)+"\n")
+                    print json.dumps(item)
         else:
             print >> sys.stderr, "no results returned for rule:{0}".format(str(self.rule_payload))
         if "next" in tacs:
