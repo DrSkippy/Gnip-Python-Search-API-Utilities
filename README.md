@@ -136,9 +136,10 @@ $ ./search_api.py -pXXXX -f"bieber" -s"2014-01-20T00:00" -e"2014-01-25T00:00" ti
 ## Paged Search
 
 <pre>
-$ echo "Nothing" | ./paged_search_api.py -h
-usage: paged_search_api.py [-h] [-s STREAM_URL] [-f] [-u USER] [-p PWD]
-                           [-n MAX]
+$ ./paged_search_api.py -h
+usage: paged_search_api.py [-h] [-s STREAM_URL] [-f] [-u USER_NAME]
+                           [-p PASSWORD] [-n MAX] [-d FROMDATE] [-t TODATE]
+                           [-z PUB]
 
 Call API until all available results returned
 
@@ -148,20 +149,30 @@ optional arguments:
                         Url of search endpoint. (See your Gnip console.)
   -f, --file            If set, create a file for each page in ./data (you
                         must create this directory before running)
-  -u USER, --user-name USER
+  -u USER_NAME, --user_name USER_NAME
                         User name
-  -p PWD, --password PWD
+  -p PASSWORD, --password PASSWORD
                         Password
   -n MAX, --results-max MAX
                         Maximum results to return (default 500)
+  -d FROMDATE, --from date FROMDATE
+                        yyyymmddhhmm
+  -t TODATE, --to date TODATE
+                        yyyymmddhhmm
+  -z PUB, --publisher PUB
+                        twitter
 </pre>
 
 
 <pre>
-$ cat rules.txt | ./paged_search_api.py -p XXXX 
-Now retrieving 500 results up to 2013-09-03 16:38:02 (UTC)...
-[{"body": "RT @CloudElements1: Interested in social media &amp; data streaming, HTTP streaming, geo-referencing and live code examples? Meetup w/ @gnip ht\u2026", "retweetCount": 1, "generator": {"link": "http://www.tweetdeck.com", "displayName": "TweetDeck"}, "twitter_filter_level": "medium", "gnip": {"language": {"value": "en"}, "urls": [{"url": "http://t.co/jhASyTC1mN", "expanded_url": "http://www.meetup.com/All-things-Cloud-PaaS-SaaS-PaaS-XaaS/events/124584092/"}], "profileLocations": [{"displayName": "Boulder, Colorado, United States",
+cat rules.txt | ./paged_search_api.py -uXXX@gnip.com -pXXX -d201405040000 -t201405050000
+Local time: 2014-05-08 13:10:05.158308
+no results returned for rule:{'q': u'(from:drskippy27 OR from:gnip) data', 'max': 500, 'publisher': 'twitter', 'fromDate': '201405040000', 'toDate': '201405050000'}
+(2, 0.0)
+{"body": "RT @Ryan_Patrickk: \u00e2\u0080\u009c@Meggrolll: Justin Bieber has more followers than Obama...\u00e2\u0080\u009d Justin Bieber for president", "retweetCount": 1, "generator": {"link": "http://twitter.com/download/iphone", "displayName": "Twitter for iPhone"}, "twitter_filter_level": "medium", "gnip": {"klout_profile": {"link": "http://klout.com/user/id/44473051085099926", "topics": [{"link": "http://klout.com/topic/id/6812045516282676984", "displayName": "Comedy", "klout_topic_id": "6812045516282676984"}, {"link": "http://klout.com/topic/id/6087704340819710495", "displayName": "High School", "klout_topic_id": "6087704340819710495"}], "klout_user_id": "44473051085099926"}, "klout_score": 47, "language": {"value": "en"}}, "favoritesCount": 0, "object": {"body": "\u00e2\u0080\u009c@Meggrolll: Justin Bieber has more followers than Obama...\u00e2\u0080\u009d Justin Bieber for president", "inReplyTo": {"link": "http://twitter.com/Meggrolll/statuses/463071587613167616"}, "generator": {"link": "http://twitter.com/download/iphone", "displayName": "Twitter for iPhone"}, "favoritesCount": 3, "object": {"postedTime": "2014-05-04T22:34:46.000Z", "summary": "\u00e2\u0080\u009c@Meggrolll: Justin Bieber has more followers than Obama...\u00e2\u0080\u009d Justin Bieber for president", "link": "http://twitter.com/Ryan_Patrickk/statuses/463084345972891649", "id": "object:search.twitter.com,2005:463084345972891649", "objectType": "note"}, "actor": {"preferredUsername": "Ryan_Patrickk", "displayName": "Ryan Patrick", "links": [{"href": null, "rel": "me"}], "twitterTimeZone": "Pacific Time (US & Canada)", "image": "https://pbs.twimg.com/profile_images/417164565659414528/evJNnnx5_normal.jpeg", "verified": false, "statusesCount": 12797, "summary": null, "languages": ["en"], "utcOffset": "-25200", "link": "http://www.twitter.com/Ryan_Patrickk", "followersCount": 268, "favoritesCount": 255, "friendsCount": 168, "listedCount": 0, "postedTime": "2010-08-22T17:15:59.000Z", "id": "id:twitter.com:181619441", "objectType": "person"}, "twitter_lang": "en", "twitter_entities": {"symbols": [], "user_mentions": [{"id": 118190783, "indices": [1, 11], "id_str": "118190783", "screen_name": "Meggrolll", "name": "Megan Carroll"}], "hashtags": [], "urls": []}, "verb": "post", "link": "http://twitter.com/Ryan_Patrickk/statuses/463084345972891649", "provider": {"link": "http://www.twitter.com", "displayName": "Twitter", "objectType": "service"}, "postedTime": "2014-05-04T22:34:46.000Z", "id": "tag:search.twitter.com,2005:463084345972891649", "objectType": "activity"}, "actor": {"preferredUsername": "Meggrolll", "displayName": "Megan Carroll", "links": [{"href": null, "rel": "me"}], "twitterTimeZone": "Pacific Time (US & Canada)", "image": "https://pbs.twimg.com/profile_images/463015172991234049/wiNAYdbL_normal.jpeg", "verified": false, "statusesCount": 30947, "summary": "My dad knows Pitbull", "languages": ["en"], "utcOffset": "-25200", "link": "http://www.twitter.com/Meggrolll", "followersCount": 568, "favoritesCount": 7218, "friendsCount": 244, "listedCount": 12, "postedTime": "2010-02-27T22:02:06.000Z", "id": "id:twitter.com:118190783", "objectType": "person"}, "twitter_lang": "en", "twitter_entities": {"symbols": [], "user_mentions": [{"id": 181619441, "indices": [3, 17], "id_str": "181619441", "screen_name": "Ryan_Patrickk", "name": "Ryan Patrick"}, {"id": 118190783, "indices": [20, 30], "id_str": "118190783", "screen_name": "Meggrolll", "name": "Megan Carroll"}], "hashtags": [], "urls": []}, "verb": "share", "link": "http://twitter.com/Meggrolll/statuses/463105492928057344", "provider": {"link": "http://www.twitter.com", "displayName": "Twitter", "objectType": "service"}, "postedTime": "2014-05-04T23:58:48.000Z", "id": "tag:search.twitter.com,2005:463105492928057344", "objectType": "activity"}
 ...
+(2, 55.0)
+Local time: 2014-05-08 13:10:10.963954 5 18.9470732456
 </pre>
 
 or use the `-f` flag to write to file.
