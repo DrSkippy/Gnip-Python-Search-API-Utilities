@@ -1,4 +1,4 @@
-#!/Users/jmontague/.virtualenvs/data/bin/python
+#!/usr/bin/env python
 # -*- coding: UTF-8 -*-
 __author__="Scott Hendrickson, Josh Montague" 
 
