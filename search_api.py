@@ -8,6 +8,7 @@ import json
 import codecs
 import argparse
 import datetime
+import time
 import re
 
 from acscsv.twacscsv import TwacsCSV
@@ -19,51 +20,31 @@ sys.stdin = codecs.getreader('utf-8')(sys.stdin)
 
 # formatter of data from API 
 TIME_FMT = "%Y%m%d%H%M"
+LOCAL_DATA_DIRECTORY = "./data/"
+PAUSE = 3 # seconds between page requests
 
 class GnipSearchAPI:
 
     USE_CASES = ["json", "wordcount","users", "rate", "links", "timeline", "geo"]
     
     def __init__(self, token_list_size=20):
-        self.token_list_size = int(token_list_size)
-        twitter_parser = argparse.ArgumentParser(
-                description="GnipSearch supports the following use cases: %s"%str(self.USE_CASES))
-        twitter_parser.add_argument("use_case", metavar= "USE_CASE", choices=self.USE_CASES, 
-                help="Use case for this search.")
-        twitter_parser.add_argument("-f", "--filter", dest="filter", default="from:jrmontag OR from:gnip",
-                help="PowerTrack filter rule (See: http://support.gnip.com/customer/portal/articles/901152-powertrack-operators)")
-        twitter_parser.add_argument("-l", "--stream-url", dest="stream_url", 
-                default="https://search.gnip.com/accounts/shendrickson/search/wayback.json",
-                help="Url of search endpoint. (See your Gnip console.)")
-        twitter_parser.add_argument("-c", "--count", dest="csv_count", action="store_true", 
-                default=False,
-                help="Return comma-separated 'date,counts' when using a counts.json endpoint.")
-        twitter_parser.add_argument("-b", "--bucket", dest="count_bucket", 
-                default="day", 
-                help="Bucket size for counts query. Options are day, hour, minute (default is 'day').")
-        twitter_parser.add_argument("-s", "--start-date", dest="start", 
-                default=None,
-                help="Start of datetime window, format 'YYYY-mm-DDTHH:MM' (default: 30 days ago)")
-        twitter_parser.add_argument("-e", "--end-date", dest="end", 
-                default=None,
-                help="End of datetime window, format 'YYYY-mm-DDTHH:MM' [Omit for most recent activities] (default: none)")
-        twitter_parser.add_argument("-q", "--query", dest="query", action="store_true", 
-                default=False, help="View API query (no data)")
-        twitter_parser.add_argument("-u", "--user-name", dest="user", default="jmontague@gnip.com",
-                help="User name")
-        twitter_parser.add_argument("-p", "--password", dest="pwd", 
-                help="Password")
-        twitter_parser.add_argument("-n", "--results-max", dest="max", default=100, 
-                help="Maximum results to return (default 100)")
-        self.options = twitter_parser.parse_args()
-        self.twitter_parser = TwacsCSV(",", None, True, True, False, True, False, False, False)
+        # Some constants to configure column retrieval
         DATE_INDEX = 1
         TEXT_INDEX = 2
         LINKS_INDEX = 3
-        USER_NAME_INDEX = 23 
+        USER_NAME_INDEX = 7 
+        # default tokenizer and character limit
         space_tokenizer = False
-        char_upper_cutoff=11
-        #
+        char_upper_cutoff = 20  # longer than for normal words because of user names
+        self.token_list_size = int(token_list_size)
+        # re for the acceptable datetime formats
+        timeRE = re.compile("([0-9]{4}).([0-9]{2}).([0-9]{2}).([0-9]{2}):([0-9]{2})")
+        # parse the command line options
+        self.options = self.args().parse_args()
+        # get a parser for the twitter columns
+        # TODO: use the updated retriveal methods in gnacs instead of this
+        self.twitter_parser = TwacsCSV(",", None, False, True, False, True, False, False, False)
+        # set up the job
         if self.options.use_case.startswith("links"):
             char_upper_cutoff=100
             space_tokenizer = True
@@ -82,7 +63,6 @@ class GnipSearchAPI:
             if self.options.count_bucket not in ['day', 'minute', 'hour']:
                 print >> sys.stderr, "Error. Invalid count bucket: %s \n"%str(self.options.count_bucket)
                 sys.exit()
-        timeRE = re.compile("([0-9]{4}).([0-9]{2}).([0-9]{2}).([0-9]{2}):([0-9]{2})")
         if self.options.start:
             dt = re.search(timeRE, self.options.start)
             if not dt:
@@ -103,7 +83,52 @@ class GnipSearchAPI:
                 for i in range(re.compile(timeRE).groups):
                     e += dt.group(i+1) 
                 self.toDate = e
+        self.name_munger(self.options.filter)
 
+    def args(self):
+        twitter_parser = argparse.ArgumentParser(
+                description="GnipSearch supports the following use cases: %s"%str(self.USE_CASES))
+        twitter_parser.add_argument("use_case", metavar= "USE_CASE", choices=self.USE_CASES, 
+                help="Use case for this search.")
+        twitter_parser.add_argument("-a", "--paged", dest="paged", action="store_true", 
+                default=False, help="Paged access to ALL available results (Warning: this makes many requests)")
+        twitter_parser.add_argument("-c", "--csv", dest="csv_flag", action="store_true", 
+                default=False,
+                help="Return comma-separated 'date,counts' or geo data.")
+        twitter_parser.add_argument("-b", "--bucket", dest="count_bucket", 
+                default="day", 
+                help="Bucket size for counts query. Options are day, hour, minute (default is 'day').")
+        twitter_parser.add_argument("-e", "--end-date", dest="end", 
+                default=None,
+                help="End of datetime window, format 'YYYY-mm-DDTHH:MM' (default: most recent activities)")
+        twitter_parser.add_argument("-f", "--filter", dest="filter", default="from:jrmontag OR from:gnip",
+                help="PowerTrack filter rule (See: http://support.gnip.com/customer/portal/articles/901152-powertrack-operators)")
+        twitter_parser.add_argument("-l", "--stream-url", dest="stream_url", 
+                default="https://search.gnip.com/accounts/shendrickson/search/wayback.json",
+                help="Url of search endpoint. (See your Gnip console.)")
+        twitter_parser.add_argument("-n", "--results-max", dest="max", default=100, 
+                help="Maximum results to return (default 100)")
+        twitter_parser.add_argument("-p", "--password", dest="pwd", 
+                help="Password")
+        twitter_parser.add_argument("-q", "--query", dest="query", action="store_true", 
+                default=False, help="View API query (no data)")
+        twitter_parser.add_argument("-s", "--start-date", dest="start", 
+                default=None,
+                help="Start of datetime window, format 'YYYY-mm-DDTHH:MM' (default: 30 days ago)")
+        twitter_parser.add_argument("-u", "--user-name", dest="user", default="jmontague@gnip.com",
+                help="User name")
+        twitter_parser.add_argument("-w", "--file-name", dest="file_name", default=False,  action="store_true", 
+                help="Create files in ./data if flag is set (default: no output files)")
+        return twitter_parser
+    
+    def name_munger(self, f):
+        """Creates a file name per input rule when reading multiple input rules."""
+        f = re.sub(' +','_',f)
+        f = f.replace(':','_')
+        f = f.replace('"','_Q_')
+        f = f.replace('(','_p_') 
+        f = f.replace(')','_p_') 
+        self.file_name_prefix = f
 
     def req(self):
         try:
@@ -119,27 +144,59 @@ class GnipSearchAPI:
             sys.exit()
         return res.text
 
-    def parse_JSON(self, doc):
+    def parse_JSON(self):
         acs = []
-        try:
-            tacs =  json.loads(doc)
-            if "results" in tacs:
-                acs = tacs["results"]
-            if "error" in tacs:
-                print >> sys.stderr, "Error, invalid request"
-                print >> sys.stderr, "Query: %s"%self.rule_payload
-                print >> sys.stderr, "Response: %s"%doc
-        except ValueError:
-            print >> sys.stderr, "Error, results not parsable"
-            print >> sys.stderr, doc
-            sys.exit()
+        repeat = True
+        page_count = 0
+        while repeat:
+            doc = self.req()
+            try:
+                tacs =  json.loads(doc)
+                if "results" in tacs:
+                    acs.extend(tacs["results"])
+                if "error" in tacs:
+                    print >> sys.stderr, "Error, invalid request"
+                    print >> sys.stderr, "Query: %s"%self.rule_payload
+                    print >> sys.stderr, "Response: %s"%doc
+            except ValueError:
+                print >> sys.stderr, "Error, results not parsable"
+                print >> sys.stderr, doc
+                sys.exit()
+            # 
+            repeat = False
+            if self.options.paged:
+                if len(acs) > 0:
+                    if self.options.file_name:
+                        file_name = LOCAL_DATA_DIRECTORY + "{0}_{1}.json".format(
+                                str(datetime.datetime.utcnow().strftime(
+                                    "%Y%m%d%H%M%S"))
+                              , str(self.file_name_prefix))
+                        with codecs.open(file_name, "wb","utf-8") as out:
+                            print >> sys.stderr, "(writing to file ...)"
+                            for item in acs:
+                                out.write(json.dumps(item)+"\n")
+                    else:
+                        # if writing to file, don't keep track of all the data in memory
+                        acs = []
+                else:
+                    print >> sys.stderr, "no results returned for rule:{0}".format(str(self.rule_payload))
+                if "next" in tacs:
+                    self.rule_payload["next"]=tacs["next"]
+                    repeat = True
+                    page_count += 1
+                    print >> sys.stderr, "Fetching page {}...".format(page_count)
+                else:
+                    if "next" in self.rule_payload:
+                        del self.rule_payload["next"]
+                    repeat = False
+                time.sleep(PAUSE)
         return acs
 
     def __call__(self):
         self.rule_payload = {
-                                'query':self.options.filter
-                                , 'maxResults': int(self.options.max)
-                                , 'publisher': 'twitter'
+                                'query': self.options.filter
+                         , 'maxResults': int(self.options.max)
+                          , 'publisher': 'twitter'
                             }
         if self.options.start:
             self.rule_payload["fromDate"] = self.fromDate
@@ -158,7 +215,7 @@ class GnipSearchAPI:
         # default delta_t = 30d & search only goes back 30 days
         self.oldest_t = datetime.datetime.utcnow() - datetime.timedelta(days=30)
         self.newest_t = datetime.datetime.utcnow()
-        for rec in self.parse_JSON(self.req()):
+        for rec in self.parse_JSON():
             self.res_cnt += 1
             if self.options.use_case.startswith("rate"):
                 t_str = self.twitter_parser.procRecordToList(rec)[self.index]
@@ -211,7 +268,8 @@ class GnipSearchAPI:
             res.append("      %5d Tweets: %6.3f %s"%(self.res_cnt, rate, unit))
             res.append("-"*WIDTH)
         elif self.options.use_case.startswith("geo"):
-            if self.options.csv_count:
+            if self.options.csv_flag:
+                res = []
                 for x in self.doc:
                     try:
                         res.append("{},{},{},{}".format(x["id"], x["postedTime"], x["longitude"], x["latitude"]))
@@ -228,7 +286,7 @@ class GnipSearchAPI:
                 res.append("%22s -- %4d  %5.2f%% %4d  %5.2f%%"%(x[4], x[0], x[1]*100., x[2], x[3]*100.))
             res.append("-"*WIDTH)
         elif self.options.use_case.startswith("time"):
-            if self.options.csv_count:
+            if self.options.csv_flag:
                 res = ["{:%Y-%m-%dT%H:%M:%S},{}".format(
                     datetime.datetime.strptime(x["timePeriod"]
                   , TIME_FMT)
