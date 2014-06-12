@@ -12,13 +12,13 @@ This package includes two utilities:
 ## Search API
 
 <pre>
-$ ./search_api.py -h
-usage: search_api.py [-h] [-f FILTER] [-l STREAM_URL] [-c] [-s START] [-e END]
-                     [-q] [-u USER] [-p PWD] [-n MAX]
+./search_api.py -h
+usage: search_api.py [-h] [-f FILTER] [-l STREAM_URL] [-c] [-b COUNT_BUCKET]
+                     [-s START] [-e END] [-q] [-u USER] [-p PWD] [-n MAX]
                      USE_CASE
 
 GnipSearch supports the following use cases: ['json', 'wordcount', 'users',
-'rate', 'links', 'timeline']
+'rate', 'links', 'timeline', 'geo']
 
 positional arguments:
   USE_CASE              Use case for this search.
@@ -32,6 +32,9 @@ optional arguments:
                         Url of search endpoint. (See your Gnip console.)
   -c, --count           Return comma-separated 'date,counts' when using a
                         counts.json endpoint.
+  -b COUNT_BUCKET, --bucket COUNT_BUCKET
+                        Bucket size for counts query. Options are day, hour,
+                        minute (default is 'day').
   -s START, --start-date START
                         Start of datetime window, format 'YYYY-mm-DDTHH:MM'
                         (default: 30 days ago)
@@ -114,6 +117,27 @@ $ ./search_api.py -p XXXX -f"from:drskippy27" wordcount
            tshirt didn --    1   0.22%    1   1.82%
 ------------------------------------------------------------
 </pre>
+
+<pre>
+./search_api.py -f"has:geo (stanleycup OR stanley cup) (kings OR rangers)" 
+-u<user> -p<pwd> geo -c
+------------------------------------------------------------
+476878698747285504,2014-06-12T00:08:36,-73.99349928,40.75051626
+476878526722109441,2014-06-12T00:07:55,-73.99325245,40.75053028
+476878019642925056,2014-06-12T00:05:54,None,None
+476877888759676928,2014-06-12T00:05:23,-118.40507289,33.94919534
+476877873173655552,2014-06-12T00:05:19,-88.23000885,41.51808253
+476877667980279808,2014-06-12T00:04:3,-96.6004089,39.1967272
+476877628570603521,2014-06-12T00:04:21,-73.31259729,40.85143322
+476877298495680512,2014-06-12T00:03:02,-118.4437007,34.2288561
+476877235388166145,2014-06-12T00:02:47,None,None
+476877191146639360,2014-06-12T00:02:36,-71.65453114,42.34354112
+476877153204977665,2014-06-12T00:02:27,-118.12250197,34.04663952
+476877092060033024,2014-06-12T00:02:13,None,None
+476876883263762432,2014-06-12T00:01:23,-87.39557622,46.54078101
+...
+</pre>
+
 <pre>
 $ ./search_api.py -pXXX -f"from:jrmontag" -s"2014-01-01T00:00" -e"2014-01-15T00:00" json
 {"body": "Bring on the #sochi #olympics. @gnip now delivering data from Russia's biggest social network. http://t.co/nUFMC8GcTC", "retweetCount": 0, "generator": {"link": "https://about.twitter.com/products/tweetdeck", "displayName": "TweetDeck"}, "twitter_filter_level": "medium", "gnip": {"language": {"value": "en"}, "urls": [{"url": "http://t.co/nUFMC8GcTC", "expanded_status": 200, "expanded_url": "http://adage.com/abstract?article_id=291068"}], "profileLocations": [{"displayName": "Boulder, Colorado, United States", "address": {"country": "United States", "region": "Colorado", "subRegion": "Boulder County", "countryCode": "US", "locality": "Boulder"}, "geo": {"type": "point", "coordinates": [-105.27055, 40.01499]}, "objectType": "place"}]}, "favoritesCount": 0, "object": {"postedTime": "2014-01-14T19:14:58.000Z", "summary": "Bring on the #sochi #olympics. @gnip now delivering data from Russia's biggest social network. http://t.co/nUFMC8GcTC", "link": "http://twitter.com/jrmontag/statuses/423171400799506432", "id": "object:search.twitter.com,2005:423171400799506432", "objectType": "note"}, "actor": {"preferredUsername": "jrmontag", "displayName": "Josh", "links": [{"href": "http://about.me/joshmontague", "rel": "me"}], "twitterTimeZone": "Mountain Time (US & Canada)", "image": "https://pbs.twimg.com/profile_images/378800000733631857/ae9fe362605ca63c1acbb93f1778592f_normal.jpeg", "verified": false, "location": {"displayName": "Boulder / Golden", "objectType": "place"}, "statusesCount": 29789, "summary": "data @gnip \r\n(and other stuff!)", "languages": ["en"], "utcOffset": "-25200", "link": "http://www.twitter.com/jrmontag", "followersCount": 1806, "favoritesCount": 568, "friendsCount": 1987, "listedCount": 161, "postedTime": "2009-06-15T20:33:22.000Z", "id": "id:twitter.com:47436444", "objectType": "person"}, "twitter_lang": "en", "twitter_entities": {"symbols": [], "user_mentions": [{"id": 16958875, "indices": [31, 36], "id_str": "16958875", "screen_name": "gnip", "name": "Gnip, Inc."}], "hashtags": [{"indices": [13, 19], "text": "sochi"}, {"indices": [20, 29], "text": "olympics"}], "urls": [{"url": "http://t.co/nUFMC8GcTC", "indices": [95, 117], "expanded_url": "http://bit.ly/1a4ycTy", "display_url": "bit.ly/1a4ycTy"}]}, "verb": "post", "link": "http://twitter.com/jrmontag/statuses/423171400799506432", "provider": {"link": "http://www.twitter.com", "displayName": "Twitter", "objectType": "service"}, "postedTime": "2014-01-14T19:14:58.000Z", "id": "tag:search.twitter.com,2005:423171400799506432", "objectType": "activity"}

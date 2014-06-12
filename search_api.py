@@ -22,7 +22,7 @@ TIME_FMT = "%Y%m%d%H%M"
 
 class GnipSearchAPI:
 
-    USE_CASES = ["json", "wordcount","users", "rate", "links", "timeline"]
+    USE_CASES = ["json", "wordcount","users", "rate", "links", "timeline", "geo"]
     
     def __init__(self, token_list_size=20):
         self.token_list_size = int(token_list_size)
@@ -56,11 +56,11 @@ class GnipSearchAPI:
         twitter_parser.add_argument("-n", "--results-max", dest="max", default=100, 
                 help="Maximum results to return (default 100)")
         self.options = twitter_parser.parse_args()
-        self.twitter_parser = TwacsCSV(",", False, False, True, False, True, False, False, False)
+        self.twitter_parser = TwacsCSV(",", None, True, True, False, True, False, False, False)
         DATE_INDEX = 1
         TEXT_INDEX = 2
         LINKS_INDEX = 3
-        USER_NAME_INDEX = 7
+        USER_NAME_INDEX = 23 
         space_tokenizer = False
         char_upper_cutoff=11
         #
@@ -178,6 +178,17 @@ class GnipSearchAPI:
                     self.freq.add("NoLinks")
             elif self.options.use_case.startswith("json"):
                 self.doc.append(json.dumps(rec))
+            elif self.options.use_case.startswith("geo"):
+                lat, lng = None, None
+                if "geo" in rec:
+                    if "coordinates" in rec["geo"]:
+                        [lat,lng] = rec["geo"]["coordinates"]
+                record = { "id": rec["id"].split(":")[2]
+                        , "postedTime": rec["postedTime"].strip(".000Z")
+                        , "latitude": lat
+                        , "longitude": lng }
+                self.doc.append(record)
+                #self.doc.append(json.dumps(record))
             elif self.options.use_case.startswith("time"):
                 self.doc.append(rec)
             else:
@@ -199,8 +210,17 @@ class GnipSearchAPI:
             res.append("         Now (UTC): %s"%str(datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")))
             res.append("      %5d Tweets: %6.3f %s"%(self.res_cnt, rate, unit))
             res.append("-"*WIDTH)
+        elif self.options.use_case.startswith("geo"):
+            if self.options.csv_count:
+                for x in self.doc:
+                    try:
+                        res.append("{},{},{},{}".format(x["id"], x["postedTime"], x["longitude"], x["latitude"]))
+                    except KeyError, e:
+                        print >> sys.stderr, str(e)
+            else:
+                res = [json.dumps(x) for x in self.doc]
         elif self.options.use_case.startswith("json"):
-            res.extend(self.doc)
+            res = self.doc
         elif self.options.use_case.startswith("word") or self.options.use_case.startswith("user"):
             res.append("%22s -- %10s     %8s (%d)"%( "terms", "mentions", "activities", self.res_cnt))
             res.append("-"*WIDTH)
@@ -209,7 +229,11 @@ class GnipSearchAPI:
             res.append("-"*WIDTH)
         elif self.options.use_case.startswith("time"):
             if self.options.csv_count:
-                res = ["{:%Y-%m-%dT%H:%M:%S},{}".format(datetime.datetime.strptime(x["timePeriod"], TIME_FMT), x["count"]) for x in self.doc]
+                res = ["{:%Y-%m-%dT%H:%M:%S},{}".format(
+                    datetime.datetime.strptime(x["timePeriod"]
+                  , TIME_FMT)
+                  , x["count"]) 
+                        for x in self.doc]
             else:
                 res = [json.dumps({"results": self.doc})] 
         else:
