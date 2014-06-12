@@ -151,10 +151,10 @@ class GnipSearchAPI:
         while repeat:
             doc = self.req()
             try:
-                tacs =  json.loads(doc)
-                if "results" in tacs:
-                    acs.extend(tacs["results"])
-                if "error" in tacs:
+                tmp_response =  json.loads(doc)
+                if "results" in tmp_response:
+                    acs.extend(tmp_response["results"])
+                if "error" in tmp_response:
                     print >> sys.stderr, "Error, invalid request"
                     print >> sys.stderr, "Query: %s"%self.rule_payload
                     print >> sys.stderr, "Response: %s"%doc
@@ -173,15 +173,15 @@ class GnipSearchAPI:
                               , str(self.file_name_prefix))
                         with codecs.open(file_name, "wb","utf-8") as out:
                             print >> sys.stderr, "(writing to file ...)"
-                            for item in acs:
+                            for item in tmp_response["results"]:
                                 out.write(json.dumps(item)+"\n")
                     else:
                         # if writing to file, don't keep track of all the data in memory
                         acs = []
                 else:
                     print >> sys.stderr, "no results returned for rule:{0}".format(str(self.rule_payload))
-                if "next" in tacs:
-                    self.rule_payload["next"]=tacs["next"]
+                if "next" in tmp_response:
+                    self.rule_payload["next"]=tmp_response["next"]
                     repeat = True
                     page_count += 1
                     print >> sys.stderr, "Fetching page {}...".format(page_count)
@@ -193,6 +193,9 @@ class GnipSearchAPI:
         return acs
 
     def __call__(self):
+        if self.options.paged:
+            # avoid making many small requests
+            self.options.max = 500
         self.rule_payload = {
                                 'query': self.options.filter
                          , 'maxResults': int(self.options.max)

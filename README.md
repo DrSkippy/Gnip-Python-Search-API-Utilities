@@ -56,6 +56,7 @@ Usage:
       -w, --file-name       Create files in ./data if flag is set (default: no
                             output files)
 
+
 ### Use cases
 
 #### JSON
@@ -65,6 +66,10 @@ Return full, enriched, Activity Streams-format JSON payloads from the Search API
     $ ./search_api.py -uXXX -pXXX -f"from:Gnip" json
     {"body": "RT @bbi: The #BigBoulder bloggers have been busy. Head to http://t.co/Rwve0dVA82 for recaps of the Sina Weibo, Tumblr &amp; Academic Research s\u2026", "retweetCount": 3, "generator": {"link": "http://twitter.com", "displayName": "Twitter Web Client"}, "twitter_filter_level": "medium", "gnip": {"klout_profile": {"link": "http://klout.com/user/id/651348", "topics": [{"link": "http://klout.com/topic/id/5144818194631006088", "displayName": "Software", "
     ...
+
+*Notes* 
+
+``-a`` option (paging) collects _all_ results before printing to stdout/file and also forces ``-n 500`` in request. 
 
 
 #### Wordcount 
