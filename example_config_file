@@ -1,0 +1,18 @@
+# user your credentials and end point url to configure command line access
+# to work without the command line options
+# Either (1) rename this file .gnip in this directlry or, to run from anywhere
+# export GNIP_CONFIG_FILE=<location and name of this file>
+#
+[creds]
+un = <email use for service>
+pwd = <password>
+
+[endpoint]
+# replace with your endpoint
+url = https://search.gnip.com/accounts/shendrickson/search/wayback.json
+
+[defaults]
+# none
+
+[tmp]
+# none

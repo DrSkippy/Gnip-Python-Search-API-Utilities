@@ -9,6 +9,8 @@ import codecs
 import argparse
 import datetime
 import time
+import os
+import ConfigParser
 import re
 
 from acscsv.twacscsv import TwacsCSV
@@ -22,6 +24,7 @@ sys.stdin = codecs.getreader('utf-8')(sys.stdin)
 TIME_FMT = "%Y%m%d%H%M"
 LOCAL_DATA_DIRECTORY = "./data/"
 PAUSE = 3 # seconds between page requests
+DEFAULT_CONFIG_FILENAME = "./.gnip"
 
 class GnipSearchAPI:
 
@@ -39,12 +42,31 @@ class GnipSearchAPI:
         self.token_list_size = int(token_list_size)
         # re for the acceptable datetime formats
         timeRE = re.compile("([0-9]{4}).([0-9]{2}).([0-9]{2}).([0-9]{2}):([0-9]{2})")
-        # parse the command line options
-        self.options = self.args().parse_args()
+        # parse config file
+        config_from_file = self.config_file()
+        if config_from_file is not None:
+            try:
+                # command line options take presidence if they exist
+                self.user = config_from_file.get('creds', 'un')
+                self.password = config_from_file.get('creds', 'pwd')
+                self.stream_url = config_from_file.get('endpoint', 'url')
+            except (ConfigParser.NoOptionError,
+                    ConfigParser.NoSectionError) as e:
+                print >> sys.stderr, "Error reading configuration file ({}), ignoring configuration file.".format(e)
         # get a parser for the twitter columns
         # TODO: use the updated retriveal methods in gnacs instead of this
         self.twitter_parser = TwacsCSV(",", None, False, True, False, True, False, False, False)
+        # parse the command line options
+        self.options = self.args().parse_args()
         # set up the job
+        # over ride config file with command line args if present
+        if self.options.user is not None:
+            self.user = self.options.user
+        if self.options.password is not None:
+            self.password = self.options.password
+        if self.options.stream_url is not None:
+            self.stream_url = self.options.stream_url
+        #
         if self.options.use_case.startswith("links"):
             char_upper_cutoff=100
             space_tokenizer = True
@@ -58,8 +80,8 @@ class GnipSearchAPI:
         elif self.options.use_case.startswith("link"):
             self.index = LINKS_INDEX
         elif self.options.use_case.startswith("time"):
-            if not self.options.stream_url.endswith("counts.json"): 
-                self.options.stream_url = self.options.stream_url[:-5] + "/counts.json"
+            if not self.stream_url.endswith("counts.json"): 
+                self.stream_url = self.stream_url[:-5] + "/counts.json"
             if self.options.count_bucket not in ['day', 'minute', 'hour']:
                 print >> sys.stderr, "Error. Invalid count bucket: %s \n"%str(self.options.count_bucket)
                 sys.exit()
@@ -85,6 +107,20 @@ class GnipSearchAPI:
                 self.toDate = e
         self.name_munger(self.options.filter)
 
+    def config_file(self):
+        config = ConfigParser.ConfigParser()
+        # (1) default file name precidence
+        config.read(DEFAULT_CONFIG_FILENAME)
+        if not config.has_section("creds"):
+            # (2) environment variable file name second
+            if 'GNIP_CONFIG_FILE' in os.environ:
+                config_filename = os.environ['GNIP_CONFIG_FILE']
+                config.read(config_filename)
+        if config.has_section("creds") and config.has_section("endpoint"):
+            return config
+        else:
+            return None
+
     def args(self):
         twitter_parser = argparse.ArgumentParser(
                 description="GnipSearch supports the following use cases: %s"%str(self.USE_CASES))
@@ -104,18 +140,18 @@ class GnipSearchAPI:
         twitter_parser.add_argument("-f", "--filter", dest="filter", default="from:jrmontag OR from:gnip",
                 help="PowerTrack filter rule (See: http://support.gnip.com/customer/portal/articles/901152-powertrack-operators)")
         twitter_parser.add_argument("-l", "--stream-url", dest="stream_url", 
-                default="https://search.gnip.com/accounts/shendrickson/search/wayback.json",
+                default=None,
                 help="Url of search endpoint. (See your Gnip console.)")
         twitter_parser.add_argument("-n", "--results-max", dest="max", default=100, 
                 help="Maximum results to return (default 100)")
-        twitter_parser.add_argument("-p", "--password", dest="pwd", 
+        twitter_parser.add_argument("-p", "--password", dest="password", default=None, 
                 help="Password")
         twitter_parser.add_argument("-q", "--query", dest="query", action="store_true", 
                 default=False, help="View API query (no data)")
         twitter_parser.add_argument("-s", "--start-date", dest="start", 
                 default=None,
                 help="Start of datetime window, format 'YYYY-mm-DDTHH:MM' (default: 30 days ago)")
-        twitter_parser.add_argument("-u", "--user-name", dest="user", default="jmontague@gnip.com",
+        twitter_parser.add_argument("-u", "--user-name", dest="user", default=None,
                 help="User name")
         twitter_parser.add_argument("-w", "--file-name", dest="file_name", default=False,  action="store_true", 
                 help="Create files in ./data if flag is set (default: no output files)")
@@ -134,8 +170,8 @@ class GnipSearchAPI:
         try:
             s = requests.Session()
             s.headers = {'Accept-encoding': 'gzip'}
-            s.auth = (self.options.user, self.options.pwd)
-            res = s.post(self.options.stream_url, data=json.dumps(self.rule_payload))
+            s.auth = (self.user, self.password)
+            res = s.post(self.stream_url, data=json.dumps(self.rule_payload))
         except requests.exceptions.ConnectionError, e:
             print >> sys.stderr, "Error (%s). Exiting without results."%str(e)
             sys.exit()
