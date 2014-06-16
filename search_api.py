@@ -42,8 +42,17 @@ class GnipSearchAPI:
         self.token_list_size = int(token_list_size)
         # re for the acceptable datetime formats
         timeRE = re.compile("([0-9]{4}).([0-9]{2}).([0-9]{2}).([0-9]{2}):([0-9]{2})")
+        #############################################
+        # CONFIG FILE/COMMAND LINE OPTIONS PATTERN
         # parse config file
         config_from_file = self.config_file()
+        # set required fields to None.  Sequence of setting is:
+        #  (1) config file
+        #  (2) command line
+        # if still none, then fail
+        self.user = None
+        self.password = None
+        self.stream_url = None
         if config_from_file is not None:
             try:
                 # command line options take presidence if they exist
@@ -53,9 +62,6 @@ class GnipSearchAPI:
             except (ConfigParser.NoOptionError,
                     ConfigParser.NoSectionError) as e:
                 print >> sys.stderr, "Error reading configuration file ({}), ignoring configuration file.".format(e)
-        # get a parser for the twitter columns
-        # TODO: use the updated retriveal methods in gnacs instead of this
-        self.twitter_parser = TwacsCSV(",", None, False, True, False, True, False, False, False)
         # parse the command line options
         self.options = self.args().parse_args()
         # set up the job
@@ -67,6 +73,7 @@ class GnipSearchAPI:
         if self.options.stream_url is not None:
             self.stream_url = self.options.stream_url
         #
+        #############################################
         if self.options.use_case.startswith("links"):
             char_upper_cutoff=100
             space_tokenizer = True
@@ -106,6 +113,9 @@ class GnipSearchAPI:
                     e += dt.group(i+1) 
                 self.toDate = e
         self.name_munger(self.options.filter)
+        # get a parser for the twitter columns
+        # TODO: use the updated retriveal methods in gnacs instead of this
+        self.twitter_parser = TwacsCSV(",", None, False, True, False, True, False, False, False)
 
     def config_file(self):
         config = ConfigParser.ConfigParser()
