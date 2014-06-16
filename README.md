@@ -57,6 +57,24 @@ Usage:
                             output files)
 
 
+##Using a configuration file
+
+To avoid entering the the -u, -p and -l options for every command, create a configuration file name ".gnip" 
+in the directory where you will run the code. If this file contains the correct parameters, you can omit
+this command line parameters.
+
+Use this template:
+
+    # export GNIP_CONFIG_FILE=<location and name of this file>
+    #
+    [creds]
+    un = <email use for service>
+    pwd = <password>
+
+    [endpoint]
+    # replace with your endpoint
+    url = https://search.gnip.com/accounts/shendrickson/search/wayback.json
+
 ### Use cases
 
 #### JSON
