@@ -163,8 +163,8 @@ class GnipSearchAPI:
                 help="Start of datetime window, format 'YYYY-mm-DDTHH:MM' (default: 30 days ago)")
         twitter_parser.add_argument("-u", "--user-name", dest="user", default=None,
                 help="User name")
-        twitter_parser.add_argument("-w", "--file-name", dest="file_name", default=False,  action="store_true", 
-                help="Create files in ./data if flag is set (default: no output files)")
+        twitter_parser.add_argument("-w", "--write-files", dest="file_flag", default=False,  action="store_true", 
+                help="Create files in ./data if flag is set. ONLY available with -a option. (Default: no output files)")
         return twitter_parser
     
     def name_munger(self, f):
@@ -212,7 +212,7 @@ class GnipSearchAPI:
             repeat = False
             if self.options.paged:
                 if len(acs) > 0:
-                    if self.options.file_name:
+                    if self.options.file_flag:
                         file_name = LOCAL_DATA_DIRECTORY + "{0}_{1}.json".format(
                                 str(datetime.datetime.utcnow().strftime(
                                     "%Y%m%d%H%M%S"))
