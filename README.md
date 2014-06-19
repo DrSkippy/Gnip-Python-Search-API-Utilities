@@ -15,10 +15,10 @@ Install from PyPI with `pip install gapi`
 
 Usage:
 
-    $ ./search_api.py -uXXX -pXXX -h
+    ./search_api.py -h
     usage: search_api.py [-h] [-a] [-c] [-b COUNT_BUCKET] [-e END] [-f FILTER]
-                         [-l STREAM_URL] [-n MAX] [-p PWD] [-q] [-s START]
-                         [-u USER] [-w]
+                         [-l STREAM_URL] [-n MAX] [-p PASSWORD] [-q] [-s START]
+                         [-u USER] [-w OUTPUT_FILE_PATH]
                          USE_CASE
 
     GnipSearch supports the following use cases: ['json', 'wordcount', 'users',
@@ -45,7 +45,7 @@ Usage:
                             Url of search endpoint. (See your Gnip console.)
       -n MAX, --results-max MAX
                             Maximum results to return (default 100)
-      -p PWD, --password PWD
+      -p PASSWORD, --password PASSWORD
                             Password
       -q, --query           View API query (no data)
       -s START, --start-date START
@@ -53,8 +53,11 @@ Usage:
                             (default: 30 days ago)
       -u USER, --user-name USER
                             User name
-      -w, --file-name       Create files in ./data if flag is set (default: no
-                            output files)
+      -w OUTPUT_FILE_PATH, --output-file-path OUTPUT_FILE_PATH
+                            Create files in ./OUTPUT-FILE-PATH. This path must
+                            exists and will not be created. This options is
+                            available only with -a option. Default is no output
+                            files.
 
 
 ##Using a configuration file

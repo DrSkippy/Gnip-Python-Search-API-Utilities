@@ -22,7 +22,6 @@ sys.stdin = codecs.getreader('utf-8')(sys.stdin)
 
 # formatter of data from API 
 TIME_FMT = "%Y%m%d%H%M"
-LOCAL_DATA_DIRECTORY = "./data/"
 PAUSE = 3 # seconds between page requests
 DEFAULT_CONFIG_FILENAME = "./.gnip"
 
@@ -163,8 +162,8 @@ class GnipSearchAPI:
                 help="Start of datetime window, format 'YYYY-mm-DDTHH:MM' (default: 30 days ago)")
         twitter_parser.add_argument("-u", "--user-name", dest="user", default=None,
                 help="User name")
-        twitter_parser.add_argument("-w", "--write-files", dest="file_flag", default=False,  action="store_true", 
-                help="Create files in ./data if flag is set. ONLY available with -a option. (Default: no output files)")
+        twitter_parser.add_argument("-w", "--output-file-path", dest="output_file_path", default=None,
+                help="Create files in ./OUTPUT-FILE-PATH. This path must exists and will not be created. This options is available only with -a option. Default is no output files.")
         return twitter_parser
     
     def name_munger(self, f):
@@ -212,8 +211,8 @@ class GnipSearchAPI:
             repeat = False
             if self.options.paged:
                 if len(acs) > 0:
-                    if self.options.file_flag:
-                        file_name = LOCAL_DATA_DIRECTORY + "{0}_{1}.json".format(
+                    if self.options.output_file_path is not None:
+                        file_name = self.options.output_file_path + "/{0}_{1}.json".format(
                                 str(datetime.datetime.utcnow().strftime(
                                     "%Y%m%d%H%M%S"))
                               , str(self.file_name_prefix))
