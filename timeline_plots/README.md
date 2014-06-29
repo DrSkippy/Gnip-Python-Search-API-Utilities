@@ -11,4 +11,4 @@ Enter your filter query as the only arguement. E.g. On June 29, entering,
 
 created the file solstice.png (example output) in this directory.
 
-![alt text](https://github.com/DrSkippy/Gnip-Python-Search-API-Utilities/master/timeline_plots/solstice.png "Solstice on Twitter June 2014")
+![alt text](/timeline_plots/solstice.png "Solstice on Twitter June 2014")
