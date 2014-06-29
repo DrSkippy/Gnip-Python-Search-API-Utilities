@@ -1,7 +1,12 @@
 #USAGE
 
-Set pathes in plot.sh correctly and make sure your .gnip is in the local directry. Then,
+Requirements:
+    * R ggplot2 installed
+    * Set paths in plot.sh to search_api.py, if necessary. (You won't need to do this if you pip installed.)
+    * Make sure your .gnip is in the local directry.
+
+Enter your filter query as the only arguement. E.g. On June 29, entering,
 
     > ./plot.sh "solstice"
 
-will create solstice.png.  See example output in this directory.
+created the file solstice.png (example output) in this directory.
