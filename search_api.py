@@ -176,7 +176,7 @@ class GnipSearchAPI:
         f = f.replace('"','_Q_')
         f = f.replace('(','_p_') 
         f = f.replace(')','_p_') 
-        self.file_name_prefix = f
+        self.file_name_prefix = f[:42]
 
     def req(self):
         try:
