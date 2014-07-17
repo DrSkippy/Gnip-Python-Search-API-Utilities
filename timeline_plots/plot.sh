@@ -6,6 +6,7 @@
 # Be sure the export GNIP_CONFIG or have your .gnip in the local folder
 # Set this or export env variable
 SEARCH_PATH=/Users/scotthendrickson/IdeaProjects/Gnip-Python-Search-API-Utilities
+SEARCH_PATH=/home/scott/Projects/Gnip-Python-Search-API-Utilities
 # can use minute, hour, day for bucket size
 BUCKET_SIZE=hour
 $SEARCH_PATH/search_api.py -f"$1" -cb$BUCKET_SIZE timeline > data.csv

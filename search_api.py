@@ -13,7 +13,10 @@ import os
 import ConfigParser
 import re
 
-from acscsv.twacscsv import TwacsCSV
+try:
+    from acscsv.twitter_acs import TwacsCSV
+except ImportError:
+    from acscsv.twitter_acs import TwacsCSV
 from simple_n_grams.simple_n_grams import SimpleNGrams
 
 reload(sys)
