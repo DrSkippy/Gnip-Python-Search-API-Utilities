@@ -16,7 +16,8 @@ import re
 try:
     from acscsv.twitter_acs import TwacsCSV
 except ImportError:
-    from acscsv.twitter_acs import TwacsCSV
+    # previous versions of gnacs used a different module name
+    from acscsv.twacscsv import TwacsCSV
 from simple_n_grams.simple_n_grams import SimpleNGrams
 
 reload(sys)
