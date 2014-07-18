@@ -6,7 +6,7 @@ setup(
     author='Scott Hendrickson, Josh Montague',
     author_email='scott@drskippy.net',
     packages=[],
-    scripts=['search_api.py', 'paged_search_api.py'],
+    scripts=['search_api.py'],
     url='https://github.com/DrSkippy27/Gnip-Python-Search-API-Utilities',
     download_url='https://github.com/DrSkippy27/Gnip-Python-Search-API-Utilities/tags/',
     license='LICENSE.txt',
