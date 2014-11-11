@@ -223,7 +223,9 @@ class GnipSearchAPI(object):
                 self.delta_t = (self.newest_t - self.oldest_t).total_seconds()/60.
             elif use_case.startswith("links"):
                 link_str = self.twitter_parser.procRecordToList(rec)[self.index]
-                if link_str != "None":
+                print "+"*20
+                print link_str
+                if link_str != "GNIPEMPTYFIELD" and link_str != "None":
                     exec("link_list=%s"%link_str)
                     for l in link_list:
                         self.freq.add(l)
