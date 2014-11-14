@@ -51,15 +51,16 @@ class GnipSearchAPI(object):
         self.paged = paged
         self.user = user
         self.password = password
-        self.stream_url = stream_url
+        self.end_point = stream_url # records end point NOT the counts end point
         # get a parser for the twitter columns
         # TODO: use the updated retriveal methods in gnacs instead of this
         self.twitter_parser = TwacsCSV(",", None, False, True, False, True, False, False, False)
 
     def set_index(self, use_case, count_bucket):
-        self.use_case = use_case
+        use_case = use_case
         space_tokenizer = False
         char_upper_cutoff = 20  # longer than for normal words because of user names
+        self.stream_url = self.end_point
         if use_case.startswith("links"):
             char_upper_cutoff=100
             space_tokenizer = True
@@ -69,12 +70,13 @@ class GnipSearchAPI(object):
         elif use_case.startswith("wordc"):
             self.index = TEXT_INDEX
         elif use_case.startswith("rate"):
+            # automatially calculated for any query that returns records
             self.index = DATE_INDEX
         elif use_case.startswith("link"):
             self.index = LINKS_INDEX
         elif use_case.startswith("time"):
-            if not self.stream_url.endswith("counts.json"): 
-                self.stream_url = self.stream_url[:-5] + "/counts.json"
+            if not self.end_point.endswith("counts.json"): 
+                self.stream_url = self.end_point[:-5] + "/counts.json"
             if count_bucket not in ['day', 'minute', 'hour']:
                 print >> sys.stderr, "Error. Invalid count bucket: %s \n"%str(count_bucket)
                 sys.exit()
@@ -104,7 +106,7 @@ class GnipSearchAPI(object):
                 self.toDate = e
 
     def name_munger(self, f):
-        """Creates a file name per input rule when reading multiple input rules."""
+        """Creates a valid, friendly file name  fro an input rule."""
         f = re.sub(' +','_',f)
         f = f.replace(':','_')
         f = f.replace('"','_Q_')
@@ -140,6 +142,7 @@ class GnipSearchAPI(object):
                     print >> sys.stderr, "Error, invalid request"
                     print >> sys.stderr, "Query: %s"%self.rule_payload
                     print >> sys.stderr, "Response: %s"%doc
+                    sys.exit()
             except ValueError:
                 print >> sys.stderr, "Error, results not parsable"
                 print >> sys.stderr, doc
@@ -181,8 +184,8 @@ class GnipSearchAPI(object):
             , start = None
             , end = None
             , count_bucket = "day" 
-            , csv_flag = False
             , query = False):
+        self.last_use_case = use_case
         self.set_index(use_case, count_bucket)
         self.set_dates(start, end)
         self.name_munger(pt_filter)
@@ -204,27 +207,30 @@ class GnipSearchAPI(object):
             print >>sys.stderr, "API query:"
             print >>sys.stderr, self.rule_payload
             sys.exit() 
-        #
+        # If output is a reinterpretation of results returned then self.doc contains the python
+        # representation of the returned record. If the results is a derived analysis such as
+        # word counts, then self.doc is empty.
         self.doc = []
         self.res_cnt = 0
         self.delta_t = 1    # keeps non-'rate' use-cases from crashing 
         # default delta_t = 30d & search only goes back 30 days
-        self.oldest_t = datetime.datetime.utcnow() - datetime.timedelta(days=30)
-        self.newest_t = datetime.datetime.utcnow()
+        # actual oldest tweet before now
+        self.oldest_t = datetime.datetime.utcnow()
+        # actual newest tweet more recent that 30 days ago
+        self.newest_t = datetime.datetime.utcnow() - datetime.timedelta(days=30)
         for rec in self.parse_JSON():
             self.res_cnt += 1
-            if use_case.startswith("rate"):
-                t_str = self.twitter_parser.procRecordToList(rec)[self.index]
+            if not use_case.startswith("time"):
+                # timeline reqeusts don't return records!
+                t_str = self.twitter_parser.procRecordToList(rec)[DATE_INDEX]
                 t = datetime.datetime.strptime(t_str,"%Y-%m-%dT%H:%M:%S.000Z")
                 if t < self.oldest_t:
                     self.oldest_t = t
                 if t > self.newest_t:
                     self.newest_t = t
                 self.delta_t = (self.newest_t - self.oldest_t).total_seconds()/60.
-            elif use_case.startswith("links"):
+            if use_case.startswith("links"):
                 link_str = self.twitter_parser.procRecordToList(rec)[self.index]
-                print "+"*20
-                print link_str
                 if link_str != "GNIPEMPTYFIELD" and link_str != "None":
                     exec("link_list=%s"%link_str)
                     for l in link_list:
@@ -247,25 +253,58 @@ class GnipSearchAPI(object):
             elif use_case.startswith("time"):
                 self.doc.append(rec)
             else:
+                # use_case is wordcount
                 self.freq.add(self.twitter_parser.procRecordToList(rec)[self.index])
-        return self.get_repr(pt_filter, csv_flag)
+        return self.doc
 
-    def get_repr(self, pt_filter, csv_flag):
-        WIDTH = 60
+    def get_frequency_list(self, size = None):
+        """Retrieve the token list structure from the last query"""
+        if size is None:
+            size = self.token_list_size
+        if any([ self.last_use_case.startswith(x) for x in ['timeline', 'json', 'rate']]):
+            print >> sys.stderr, "No frequency available for use_case {}".format(self.last_use_case)
+            return []
+        return list(self.freq.get_tokens(size))
+
+    def get_rate(self):
+        """Return rate from last query"""
+        return float(self.res_cnt)/self.delta_t
+
+    def get_repr(self
+            , pt_filter
+            , max_results = 100
+            , use_case = "wordcount"
+            , start = None
+            , end = None
+            , count_bucket = "day" 
+            , csv_flag = False
+            , query = False):
+        # get some results by running theq query
+        self.query_api(pt_filter
+            , max_results
+            , use_case
+            , start
+            , end
+            , count_bucket
+            , query)
+        # e.g. command line style text output
+        # TODO: Fix mixed formatting types
+        WIDTH = 80
+        BIG_COLUMN = 32
         res = [u"-"*WIDTH]
-        if self.use_case.startswith("rate"):
-            rate = float(self.res_cnt)/self.delta_t
+        if use_case.startswith("rate"):
+            rate = self.get_rate()
             unit = "Tweets/Minute"
             if rate < 0.01:
                 rate *= 60.
                 unit = "Tweets/Hour"
-            res.append("   PowerTrack Rule: \"%s\""%pt_filter)
-            res.append("Oldest Tweet (UTC): %s"%str(self.oldest_t))
-            res.append("Newest Tweet (UTC): %s"%str(self.newest_t))
-            res.append("         Now (UTC): %s"%str(datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")))
-            res.append("      %5d Tweets: %6.3f %s"%(self.res_cnt, rate, unit))
+            res.append("     PowerTrack Rule: \"%s\""%pt_filter)
+            res.append("  Oldest Tweet (UTC): %s"%str(self.oldest_t))
+            res.append("  Newest Tweet (UTC): %s"%str(self.newest_t))
+            res.append("           Now (UTC): %s"%str(datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")))
+            res.append("        %5d Tweets: %6.3f %s"%(self.res_cnt, rate, unit))
             res.append("-"*WIDTH)
-        elif self.use_case.startswith("geo"):
+        elif use_case.startswith("geo"):
             if csv_flag:
                 res = []
                 for x in self.doc:
@@ -275,15 +314,17 @@ class GnipSearchAPI(object):
                         print >> sys.stderr, str(e)
             else:
                 res = [json.dumps(x) for x in self.doc]
-        elif self.use_case.startswith("json"):
+        elif use_case.startswith("json"):
             res = self.doc
-        elif self.use_case.startswith("word") or self.use_case.startswith("user"):
-            res.append("%22s -- %10s     %8s (%d)"%( "terms", "mentions", "activities", self.res_cnt))
+        elif use_case.startswith("word") or use_case.startswith("user"):
+            fmt_str = "%{}s -- %10s     %8s (%d)".format(BIG_COLUMN)
+            res.append(fmt_str%( "terms", "mentions", "activities", self.res_cnt))
             res.append("-"*WIDTH)
+            fmt_str =  "%{}s -- %4d  %5.2f%% %4d  %5.2f%%".format(BIG_COLUMN)
             for x in self.freq.get_tokens(self.token_list_size):
-                res.append("%22s -- %4d  %5.2f%% %4d  %5.2f%%"%(x[4], x[0], x[1]*100., x[2], x[3]*100.))
+                res.append(fmt_str%(x[4], x[0], x[1]*100., x[2], x[3]*100.))
             res.append("-"*WIDTH)
-        elif self.use_case.startswith("time"):
+        elif use_case.startswith("time"):
             if csv_flag:
                 res = ["{:%Y-%m-%dT%H:%M:%S},{}".format(
                     datetime.datetime.strptime(x["timePeriod"]
@@ -303,12 +344,17 @@ class GnipSearchAPI(object):
 
 if __name__ == "__main__":
     g = GnipSearchAPI("shendrickson@gnip.com"
-            , "XXXXXXXXPASSWORDXXXXXXXXXX"
+            , "XXXXXXXXXXXXPASSWORDXXXXXXXXXXXX"
             , "https://search.gnip.com/accounts/shendrickson/search/wayback.json")
-    print g.query_api("bieber")
-    print g.query_api("bieber", 50)
+    print g.get_repr("bieber", 100, "rate")
+    print g.get_rate()
+    print g.get_repr("bieber")
+    print g.get_frequency_list(25)
+    print g.get_repr("bieber", 50)
     print g.query_api("bieber", 10, "json")
-    print g.query_api("bieber", 0, "timeline")
-    print g.query_api("bieber", 10, "users")
-    print g.query_api("bieber", 10, "rate")
-    print g.query_api("bieber", 10, "links")
+    print g.get_frequency_list(10)
+    print g.query_api("bieber", use_case = "timeline")
+    print g.get_repr("bieber", 10, "users")
+    print g.get_rate()
+    print g.get_repr("bieber", 10, "links")
+    print g.query_api("bieber", query=True)

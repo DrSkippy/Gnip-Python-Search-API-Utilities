@@ -119,7 +119,7 @@ class GnipSearchCMD(GnipSearchAPI):
         return twitter_parser
     
     def __call__(self):
-        return self.query_api(
+        return self.get_repr(
             self.options.filter
             , self.options.max
             , self.options.use_case
