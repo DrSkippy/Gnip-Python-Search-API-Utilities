@@ -58,13 +58,13 @@ class GnipSearchAPI(object):
 
     def set_index(self, use_case, count_bucket):
         use_case = use_case
-        space_tokenizer = False
+        tokenizer = "twitter"
         char_upper_cutoff = 20  # longer than for normal words because of user names
         self.stream_url = self.end_point
         if use_case.startswith("links"):
             char_upper_cutoff=100
-            space_tokenizer = True
-        self.freq = SimpleNGrams(charUpperCutoff=char_upper_cutoff, space_tokenizer=space_tokenizer)
+            tokenizer = "space"
+        self.freq = SimpleNGrams(char_upper_cutoff=char_upper_cutoff, tokenizer=tokenizer)
         if use_case.startswith("user"):
             self.index = USER_NAME_INDEX
         elif use_case.startswith("wordc"):
@@ -126,7 +126,8 @@ class GnipSearchAPI(object):
         except requests.exceptions.HTTPError, e:
             print >> sys.stderr, "Error (%s). Exiting without results."%str(e)
             sys.exit()
-        return res.text
+        #Don't use res.text -- creates encoding challenges!
+        return unicode(res.content, "utf-8")
 
     def parse_JSON(self):
         acs = []
@@ -209,7 +210,7 @@ class GnipSearchAPI(object):
             sys.exit() 
         # If output is a reinterpretation of results returned then self.doc contains the python
         # representation of the returned record. If the results is a derived analysis such as
-        # word counts, then self.doc is empty.
+        # word counts, then self.doc contains the json records.
         self.doc = []
         self.res_cnt = 0
         self.delta_t = 1    # keeps non-'rate' use-cases from crashing 
@@ -237,9 +238,13 @@ class GnipSearchAPI(object):
                         self.freq.add(l)
                 else:
                     self.freq.add("NoLinks")
-            elif use_case.startswith("json"):
+            if use_case.startswith(
+                    "json") or use_case.startswith(
+                    "word") or use_case.startswith(
+                    "links") or use_case.startswith(
+                    "user"):
                 self.doc.append(json.dumps(rec))
-            elif use_case.startswith("geo"):
+            if use_case.startswith("geo"):
                 lat, lng = None, None
                 if "geo" in rec:
                     if "coordinates" in rec["geo"]:
@@ -252,7 +257,9 @@ class GnipSearchAPI(object):
                 #self.doc.append(json.dumps(record))
             elif use_case.startswith("time"):
                 self.doc.append(rec)
-            else:
+            elif use_case.startswith(
+                    "word") or use_case.startswith(
+                    "user"):
                 # use_case is wordcount
                 self.freq.add(self.twitter_parser.procRecordToList(rec)[self.index])
         return self.doc
@@ -340,7 +347,7 @@ class GnipSearchAPI(object):
             for x in self.freq.get_tokens(self.token_list_size):
                 res.append("%100s -- %4d  %5.2f%% %4d  %5.2f%%"%(x[4], x[0], x[1]*100., x[2], x[3]*100.))
             res.append("-"*WIDTH)
-        return "\n".join(res)
+        return u"\n".join(res)
 
 if __name__ == "__main__":
     g = GnipSearchAPI("shendrickson@gnip.com"
