@@ -1,16 +1,33 @@
 #!/usr/bin/env bash
 #
-# Takes 1 arguement: Filter for search
-# e.g. ./plot.sh "@drskippy"
-#
-# Be sure the export GNIP_CONFIG or have your .gnip in the local folder
-# Set this or export env variable
-GNIP_SEARCH_PATH=/Users/shendrickson/workspace/Gnip-Python-Search-API-Utilities
-#GNIP_SEARCH_PATH=/home/scott/workspace/Gnip-Python-Search-API-Utilities
+echo "######################################################################"
+echo "USAGE: plot.sh takes 2 arguements: a valid powertrack filter, and a valid"
+echo "       file name."
+echo ""
+echo "           e.g. ./plot.sh \"@drskippy\" \"MyTweets\""
+echo 
+echo "OUTPUT:    - Summary statistics table"
+echo "           - ./examples/<filter>.png is the timeline"
+echo "           - ./examples/<filter>_hist.png is the distribution of bucket volumes"
+echo "           - 1- and 2-grams summary"
+echo 
+echo "REQUIREMENTS:"
+echo "           - gnip search (install with e.g. sudo pip install gapi)"
+echo "           - .gnip configuration file with your credentials"
+echo "             in this directory or export appropirate environment"
+echo "             variable"
+echo "######################################################################"
+
 # can use minute, hour, day for bucket size
 BUCKET_SIZE=hour
-$GNIP_SEARCH_PATH/search_api.py -f"$1" -cb$BUCKET_SIZE timeline > data.csv
-./plot.r data.csv "$1" "$1" "$BUCKET_SIZE"
-cat data.csv | cut -d, -f2 | /Users/shendrickson/workspace/CollectorUtils/stats.py
-# on OSX, if you want to immediatly see your plot
-open "$1".png
+if [ ! -d ./examples ]; then
+    mkdir ./examples
+fi
+search_api.py -f"$1" -cb$BUCKET_SIZE timeline > "./examples/$2.csv"
+./plot.r "./examples/$2.csv" "./examples/$2" "$1" "$BUCKET_SIZE"
+if [ $(uname) == "Darwin" ]; then
+    # on OSX, if you want to immediatly see your plot
+    open "./examples/$2_hist.png"
+    open "./examples/$2.png"
+fi
+search_api.py -f"$1" -n500 wordcount
