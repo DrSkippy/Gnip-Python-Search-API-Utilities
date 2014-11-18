@@ -18,7 +18,7 @@ X = read.delim(paste(sep="", args[1], "_sig.csv"), sep=",", header=TRUE)
 colnames(Y) <- c("time","count")
 colnames(X) <- c("time","count")
 Y$date <- as.POSIXct(Y$time, format="%Y-%m-%dT%H:%M:%S")
-X$date <- as.POSIXct(X$time, format="%Y-%m-%d %H:%M:%S")
+X$date <- as.POSIXct(X$time, format="%Y-%m-%dT%H:%M:%S")
 ##############
 png(filename = paste(sep="", args[2], ".png"), width = 850, height = 500, units = 'px')
     ggplot(data=Y) +
@@ -40,9 +40,11 @@ dev.off()
 #    theme(legend.position = 'none', text = element_text(size=20))
 #dev.off()
 ##############
-Z = read.delim(paste(sep="", args[1], "_freq.csv"), sep=",", header=TRUE)
-png(filename = paste(sep="", args[2], "_treemap.png"), width = 850, height = 500, units = 'px')
-    treemap(Z, index=c("tokens"), vSize="percent.of.total")
-dev.off()
-
+for (i in 1:4) {
+    print(paste(sep="", args[1], "_", i, "_freq.csv"))
+    Z = read.delim(paste(sep="", args[1], "_", i, "_freq.csv"), sep=",", header=TRUE)
+    png(filename = paste(sep="", args[2], "_", i, "_treemap.png"), width = 850, height = 500, units = 'px')
+        treemap(Z, index=c("tokens"), vSize="percent.of.total")
+    dev.off()
+}
 summary(Y) 

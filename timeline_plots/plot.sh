@@ -29,14 +29,17 @@ if [ ! -d ./examples ]; then
     mkdir ./examples
 fi
 search_api.py -f"$1" -cb$BUCKET_SIZE timeline > "./examples/$2.csv" &
-search_api.py -f"$1" -n500 json | jq ".body" | term_frequency.py -w -n20 > "./examples/${2}_freq.csv" &
+#search_api.py -f"$1" -n500 json | jq ".body" | term_frequency.py -w -n20 > "./examples/${2}_freq.csv" &
 wait
 cat "./examples/${2}.csv" | ./signal.py | grep -v "scipy" > "./examples/${2}_sig.csv"
+cat "./examples/${2}_sig.csv" | "./make_query_str.py" "${1}" "${2}" > "./${2}_queries.sh"
+. ./${2}_queries.sh
+wait
 ./plot.r "./examples/$2" "./examples/$2" "$1" "$BUCKET_SIZE"
 if [ $(uname) == "Darwin" ]; then
     # on OSX, if you want to immediatly see your plot
     # open "./examples/${2}_hist.png"
-    open "./examples/${2}_treemap.png"
-    open "./examples/${2}.png"
+    open ./examples/${2}_*_treemap.png
+    open ./examples/${2}.png
 fi
-search_api.py -f"$1" -n500 wordcount
+#search_api.py -f"$1" -n500 wordcount
