@@ -218,7 +218,7 @@ class GnipSearchAPI(object):
 
 if __name__ == "__main__":
     g = GnipSearchAPI("shendrickson@gnip.com"
-            , "merploft"
+            , "XXXPWDXXX"
             , "https://search.gnip.com/accounts/shendrickson/search/wayback.json")
     g.query_api("bieber", 10)
     print g
