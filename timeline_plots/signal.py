@@ -46,7 +46,7 @@ data_no_day = numpy.array([data_no_trend[i] - hours_avg[dates[i].hour] for i in 
 #data_1 = numpy.convolve(data_1, numpy.ones((N,))/N, mode='valid')
 #
 # peak detection
-peakind = signal.find_peaks_cwt(data_no_day, numpy.arange(1,36), min_snr = 1)
+peakind = signal.find_peaks_cwt(data_no_day, numpy.arange(1,36), min_snr = .75)
 #filter for top
 top_peaks = sorted([(data[i+1], i) for i in peakind])[-N_PEAKS:]
 # sort by date order
@@ -61,23 +61,19 @@ for p in top_peaks:
     i = p-1
     while data[i] >= data[p-1]:
         i += 1
-    wrtr.writerow([dates[p-1].strftime(FMT), 0])
-    wrtr.writerow([dates[p-1].strftime(FMT), data[p+1]])
-    wrtr.writerow([dates[i].strftime(FMT), data[p+1]])
-    wrtr.writerow([dates[i].strftime(FMT), 0])
+    wrtr.writerow([dates[p-1].strftime(FMT), 0, "Peaks"])
+    wrtr.writerow([dates[p-1].strftime(FMT), data[p+1], "Peaks"])
+    wrtr.writerow([dates[i].strftime(FMT), data[p+1], "Peaks"])
+    wrtr.writerow([dates[i].strftime(FMT), 0, "Peaks"])
 #
 # change point experiements
-#for i in range(len(data)):
-    #wrtr.writerow([dates[i], data_1[i]])
+import bayesian_changepoint_detection.offline_changepoint_detection as offcd
+from functools import partial
 
-#import bayesian_changepoint_detection.offline_changepoint_detection as offcd
-#from functools import partial
+Q, P, Pcp = offcd.offline_changepoint_detection(data_no_day
+        , partial(offcd.const_prior
+        , l=(len(data_no_day)+1))
+        , offcd.gaussian_obs_log_likelihood, truncate=-20)
 
-#Q, P, Pcp = offcd.offline_changepoint_detection(data_1
-#        , partial(offcd.const_prior
-#        , l=(len(data_1)+1))
-#        , offcd.gaussian_obs_log_likelihood, truncate=-20)
-
-#for d,x in zip(data, list(numpy.exp(Pcp).sum(0))):
-#    pass
-#    wrtr.writerow([d[0], x*max(data_1)])
+for d,x in zip(dates, list(numpy.exp(Pcp).sum(0))):
+    wrtr.writerow([d.strftime(FMT), x, "Changepoints"])
