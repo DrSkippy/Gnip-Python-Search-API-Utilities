@@ -274,7 +274,7 @@ class GnipSearchAnalysis(GnipSearchAPI):
 
 if __name__ == "__main__":
     g = GnipSearchAnalysis("shendrickson@gnip.com"
-            , "***REMOVED***"
+            , "XXXPWDXXX"
             , "https://search.gnip.com/accounts/shendrickson/search/wayback.json")
     print g.get_repr("bieber", 100, "rate")
     print g.get_rate()
