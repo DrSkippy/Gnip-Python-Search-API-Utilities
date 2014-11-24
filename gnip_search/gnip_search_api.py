@@ -11,27 +11,17 @@ import time
 import os
 import re
 
-try:
-    from acscsv.twitter_acs import TwacsCSV
-except ImportError:
-    # previous versions of gnacs used a different module name
-    from acscsv.twacscsv import TwacsCSV
-from simple_n_grams.simple_n_grams import SimpleNGrams
+from acscsv.twitter_acs import TwacsCSV
 
 reload(sys)
 sys.stdout = codecs.getwriter('utf-8')(sys.stdout)
 sys.stdin = codecs.getreader('utf-8')(sys.stdin)
 
 # formatter of data from API 
-TIME_FMT = "%Y%m%d%H%M"
+TIME_FMT_SHORT = "%Y%m%d%H%M"
+TIME_FMT_LONG = "%Y-%m-%dT%H:%M:%S.000Z"
 PAUSE = 3 # seconds between page requests
-
-#############################################
-# Some constants to configure column retrieval from TwacsCSV
-DATE_INDEX = 1
-TEXT_INDEX = 2
-LINKS_INDEX = 3
-USER_NAME_INDEX = 7 
+POSTED_TIME_IDX = 1
 
 class GnipSearchAPI(object):
     
@@ -41,12 +31,8 @@ class GnipSearchAPI(object):
             , stream_url
             , paged = False
             , output_file_path = None
-            , token_list_size = 20
             ):
         #############################################
-        # set up query paramters
-        # default tokenizer and character limit
-        self.token_list_size = int(token_list_size)
         self.output_file_path = output_file_path
         self.paged = paged
         self.user = user
@@ -56,31 +42,6 @@ class GnipSearchAPI(object):
         # TODO: use the updated retriveal methods in gnacs instead of this
         self.twitter_parser = TwacsCSV(",", None, False, True, False, True, False, False, False)
 
-    def set_index(self, use_case, count_bucket):
-        use_case = use_case
-        tokenizer = "twitter"
-        char_upper_cutoff = 20  # longer than for normal words because of user names
-        self.stream_url = self.end_point
-        if use_case.startswith("links"):
-            char_upper_cutoff=100
-            tokenizer = "space"
-        self.freq = SimpleNGrams(char_upper_cutoff=char_upper_cutoff, tokenizer=tokenizer)
-        if use_case.startswith("user"):
-            self.index = USER_NAME_INDEX
-        elif use_case.startswith("wordc"):
-            self.index = TEXT_INDEX
-        elif use_case.startswith("rate"):
-            # automatially calculated for any query that returns records
-            self.index = DATE_INDEX
-        elif use_case.startswith("link"):
-            self.index = LINKS_INDEX
-        elif use_case.startswith("time"):
-            if not self.end_point.endswith("counts.json"): 
-                self.stream_url = self.end_point[:-5] + "/counts.json"
-            if count_bucket not in ['day', 'minute', 'hour']:
-                print >> sys.stderr, "Error. Invalid count bucket: %s \n"%str(count_bucket)
-                sys.exit()
-        
     def set_dates(self, start, end):
         # re for the acceptable datetime formats
         timeRE = re.compile("([0-9]{4}).([0-9]{2}).([0-9]{2}).([0-9]{2}):([0-9]{2})")
@@ -181,187 +142,88 @@ class GnipSearchAPI(object):
     def query_api(self
             , pt_filter
             , max_results = 100
-            , use_case = "wordcount"
             , start = None
             , end = None
-            , count_bucket = "day" 
+            , count_bucket = "hour" # None is json
             , query = False):
-        self.last_use_case = use_case
-        self.set_index(use_case, count_bucket)
         self.set_dates(start, end)
         self.name_munger(pt_filter)
         if self.paged:
             # avoid making many small requests
             max_results = 500
         self.rule_payload = {
-                                'query': pt_filter
-                         , 'maxResults': int(max_results)
-                          , 'publisher': 'twitter'
-                            }
+                    'query': pt_filter
+            , 'maxResults': int(max_results)
+            ,  'publisher': 'twitter'
+            }
         if start:
             self.rule_payload["fromDate"] = self.fromDate
         if end:
             self.rule_payload["toDate"] = self.toDate
-        if use_case.startswith("time"):
+        self.stream_url = self.end_point
+        if count_bucket:
+            if not self.end_point.endswith("counts.json"): 
+                self.stream_url = self.end_point[:-5] + "/counts.json"
+            if count_bucket not in ['day', 'minute', 'hour']:
+                print >> sys.stderr, "Error. Invalid count bucket: %s \n"%str(count_bucket)
+                sys.exit()
             self.rule_payload["bucket"] = count_bucket
         if query:
             print >>sys.stderr, "API query:"
             print >>sys.stderr, self.rule_payload
             sys.exit() 
-        # If output is a reinterpretation of results returned then self.doc contains the python
-        # representation of the returned record. If the results is a derived analysis such as
-        # word counts, then self.doc contains the json records.
-        self.doc = []
+        # 
+        self.time_series = []
+        self.rec_dict_list = []
+        self.rec_list_list = []
         self.res_cnt = 0
+        # timing
         self.delta_t = 1    # keeps non-'rate' use-cases from crashing 
-        # default delta_t = 30d & search only goes back 30 days
         # actual oldest tweet before now
         self.oldest_t = datetime.datetime.utcnow()
         # actual newest tweet more recent that 30 days ago
         self.newest_t = datetime.datetime.utcnow() - datetime.timedelta(days=30)
+        #
         for rec in self.parse_JSON():
             self.res_cnt += 1
-            if not use_case.startswith("time"):
-                # timeline reqeusts don't return records!
-                t_str = self.twitter_parser.procRecordToList(rec)[DATE_INDEX]
-                t = datetime.datetime.strptime(t_str,"%Y-%m-%dT%H:%M:%S.000Z")
-                if t < self.oldest_t:
-                    self.oldest_t = t
-                if t > self.newest_t:
-                    self.newest_t = t
-                self.delta_t = (self.newest_t - self.oldest_t).total_seconds()/60.
-            if use_case.startswith("links"):
-                link_str = self.twitter_parser.procRecordToList(rec)[self.index]
-                if link_str != "GNIPEMPTYFIELD" and link_str != "None":
-                    exec("link_list=%s"%link_str)
-                    for l in link_list:
-                        self.freq.add(l)
-                else:
-                    self.freq.add("NoLinks")
-            if use_case.startswith(
-                    "json") or use_case.startswith(
-                    "word") or use_case.startswith(
-                    "links") or use_case.startswith(
-                    "user"):
-                self.doc.append(json.dumps(rec))
-            if use_case.startswith("geo"):
-                lat, lng = None, None
-                if "geo" in rec:
-                    if "coordinates" in rec["geo"]:
-                        [lat,lng] = rec["geo"]["coordinates"]
-                record = { "id": rec["id"].split(":")[2]
-                        , "postedTime": rec["postedTime"].strip(".000Z")
-                        , "latitude": lat
-                        , "longitude": lng }
-                self.doc.append(record)
-                #self.doc.append(json.dumps(record))
-            elif use_case.startswith("time"):
-                self.doc.append(rec)
-            elif use_case.startswith(
-                    "word") or use_case.startswith(
-                    "user"):
-                # use_case is wordcount
-                self.freq.add(self.twitter_parser.procRecordToList(rec)[self.index])
-        return self.doc
-
-    def get_frequency_list(self, size = None):
-        """Retrieve the token list structure from the last query"""
-        if size is None:
-            size = self.token_list_size
-        if any([ self.last_use_case.startswith(x) for x in ['timeline', 'json', 'rate']]):
-            print >> sys.stderr, "No frequency available for use_case {}".format(self.last_use_case)
-            return []
-        return list(self.freq.get_tokens(size))
+            self.rec_dict_list.append(rec)
+            if count_bucket:
+                # timeline
+                t = datetime.datetime.strptime(rec["timePeriod"], TIME_FMT_SHORT)
+                tmp_tl_list = [rec["timePeriod"], rec["count"], t]
+            else:
+                # json records
+                tmp_list = self.twitter_parser.procRecordToList(rec)
+                self.rec_list_list.append(tmp_list)
+                t = datetime.datetime.strptime(tmp_list[POSTED_TIME_IDX], TIME_FMT_LONG)
+                tmp_tl_list = [tmp_list[POSTED_TIME_IDX], 1, t]
+            self.time_series.append(tmp_tl_list)
+            # timeline reqeusts don't return records!
+            if t < self.oldest_t:
+                self.oldest_t = t
+            if t > self.newest_t:
+                self.newest_t = t
+            self.delta_t = (self.newest_t - self.oldest_t).total_seconds()/60.
+        return 
 
     def get_rate(self):
         """Return rate from last query"""
         return float(self.res_cnt)/self.delta_t
 
-    def get_repr(self
-            , pt_filter
-            , max_results = 100
-            , use_case = "wordcount"
-            , start = None
-            , end = None
-            , count_bucket = "day" 
-            , csv_flag = False
-            , query = False):
-        # get some results by running theq query
-        self.query_api(pt_filter
-            , max_results
-            , use_case
-            , start
-            , end
-            , count_bucket
-            , query)
-        # e.g. command line style text output
-        # TODO: Fix mixed formatting types
-        WIDTH = 80
-        BIG_COLUMN = 32
-        res = [u"-"*WIDTH]
-        if use_case.startswith("rate"):
-            rate = self.get_rate()
-            unit = "Tweets/Minute"
-            if rate < 0.01:
-                rate *= 60.
-                unit = "Tweets/Hour"
-            res.append("     PowerTrack Rule: \"%s\""%pt_filter)
-            res.append("  Oldest Tweet (UTC): %s"%str(self.oldest_t))
-            res.append("  Newest Tweet (UTC): %s"%str(self.newest_t))
-            res.append("           Now (UTC): %s"%str(datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")))
-            res.append("        %5d Tweets: %6.3f %s"%(self.res_cnt, rate, unit))
-            res.append("-"*WIDTH)
-        elif use_case.startswith("geo"):
-            if csv_flag:
-                res = []
-                for x in self.doc:
-                    try:
-                        res.append("{},{},{},{}".format(x["id"], x["postedTime"], x["longitude"], x["latitude"]))
-                    except KeyError, e:
-                        print >> sys.stderr, str(e)
-            else:
-                res = [json.dumps(x) for x in self.doc]
-        elif use_case.startswith("json"):
-            res = self.doc
-        elif use_case.startswith("word") or use_case.startswith("user"):
-            fmt_str = "%{}s -- %10s     %8s (%d)".format(BIG_COLUMN)
-            res.append(fmt_str%( "terms", "mentions", "activities", self.res_cnt))
-            res.append("-"*WIDTH)
-            fmt_str =  "%{}s -- %4d  %5.2f%% %4d  %5.2f%%".format(BIG_COLUMN)
-            for x in self.freq.get_tokens(self.token_list_size):
-                res.append(fmt_str%(x[4], x[0], x[1]*100., x[2], x[3]*100.))
-            res.append("-"*WIDTH)
-        elif use_case.startswith("time"):
-            if csv_flag:
-                res = ["{:%Y-%m-%dT%H:%M:%S},{}".format(
-                    datetime.datetime.strptime(x["timePeriod"]
-                  , TIME_FMT)
-                  , x["count"]) 
-                        for x in self.doc]
-            else:
-                res = [json.dumps({"results": self.doc})] 
-        else:
-            res[-1]+=u"-"*WIDTH
-            res.append("%100s -- %10s     %8s (%d)"%("links", "mentions", "activities", self.res_cnt))
-            res.append("-"*2*WIDTH)
-            for x in self.freq.get_tokens(self.token_list_size):
-                res.append("%100s -- %4d  %5.2f%% %4d  %5.2f%%"%(x[4], x[0], x[1]*100., x[2], x[3]*100.))
-            res.append("-"*WIDTH)
-        return u"\n".join(res)
+    def __len__(self):
+        return self.res_cnt
+
+    def __repr__(self):
+        return "\n".join([json.dumps(x) for x in self.rec_dict_list])
 
 if __name__ == "__main__":
     g = GnipSearchAPI("shendrickson@gnip.com"
-            , "XXXXXXXXXXXXPASSWORDXXXXXXXXXXXX"
+            , "***REMOVED***"
             , "https://search.gnip.com/accounts/shendrickson/search/wayback.json")
-    print g.get_repr("bieber", 100, "rate")
+    g.query_api("bieber", 10)
+    print g
     print g.get_rate()
-    print g.get_repr("bieber")
-    print g.get_frequency_list(25)
-    print g.get_repr("bieber", 50)
-    print g.query_api("bieber", 10, "json")
-    print g.get_frequency_list(10)
-    print g.query_api("bieber", use_case = "timeline")
-    print g.get_repr("bieber", 10, "users")
-    print g.get_rate()
-    print g.get_repr("bieber", 10, "links")
-    print g.query_api("bieber", query=True)
+    g.query_api("bieber")
+    g.query_api("bieber", count_bucket = "hour")
+    print len(g)
+    g.query_api("bieber", query=True)

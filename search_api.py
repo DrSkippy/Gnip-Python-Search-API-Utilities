@@ -11,7 +11,7 @@ import time
 import os
 import ConfigParser
 
-from gnip_search.gnip_search_api import *
+from gnip_search.gnip_search_analysis import *
 
 reload(sys)
 sys.stdout = codecs.getwriter('utf-8')(sys.stdout)
