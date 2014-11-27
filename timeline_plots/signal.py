@@ -23,6 +23,7 @@ from functools import partial
 
 import numpy
 from scipy import signal
+import statsmodels.api as sm
 
 # https://github.com/hildensia/bayesian_changepoint_detection/
 import bayesian_changepoint_detection.offline_changepoint_detection as offcd
@@ -85,18 +86,29 @@ for p in top_peaks:
     i = p-1
     while data[i] >= data[p-1]:
         i += 1
-    wrtr.writerow([dates[p-1].strftime(FMT), 0, "Peaks"])
-    wrtr.writerow([dates[p-1].strftime(FMT), data[p+1], "Peaks"])
-    wrtr.writerow([dates[i].strftime(FMT), data[p+1], "Peaks"])
-    wrtr.writerow([dates[i].strftime(FMT), 0, "Peaks"])
+    wrtr.writerow([dates[p-1].strftime(FMT), 0, "2_peaks"])
+    wrtr.writerow([dates[p-1].strftime(FMT), data[p+1], "2_peaks"])
+    wrtr.writerow([dates[i].strftime(FMT), data[p+1], "2_peaks"])
+    wrtr.writerow([dates[i].strftime(FMT), 0, "2_peaks"])
+
+####################################################################
+# stats models trend and cycle
+ 
+cycle, trend = sm.tsa.filters.hpfilter(numpy.array(data))
+
+for i in range(len(dates)):
+    wrtr.writerow([dates[i].strftime(FMT), cycle[i], "3_tc_cycle"])
+for i in range(len(dates)):
+    wrtr.writerow([dates[i].strftime(FMT), trend[i], "4_tc_trend"])
 
 ####################################################################
 # change point detection
 
-Q, P, Pcp = offcd.offline_changepoint_detection(data_no_day
+Q, P, Pcp = offcd.offline_changepoint_detection(trend
         , partial(offcd.const_prior
-        , l=(len(data_no_day)+1))
+        , l=(len(trend)+1))
         , offcd.gaussian_obs_log_likelihood, truncate=-20)
 
 for d,x in zip(dates, list(numpy.exp(Pcp).sum(0))):
-    wrtr.writerow([d.strftime(FMT), x, "Changepoints"])
+    wrtr.writerow([d.strftime(FMT), x, "5_change_points"])
+

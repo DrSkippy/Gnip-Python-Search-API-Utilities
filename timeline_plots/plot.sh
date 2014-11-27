@@ -45,6 +45,7 @@ if [ $(uname) == "Darwin" ]; then
     # on OSX, if you want to immediatly see your plot
     # open "./examples/${2}_hist.png"
     open ./examples/${2}_*_treemap.png
+    open ./examples/${2}_*_points.png
     open ./examples/${2}.png
     open ./examples/${2}_sig.png
 fi

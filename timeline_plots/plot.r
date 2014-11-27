@@ -14,13 +14,10 @@ if (length(args) != 4) {
 }
 ##############
 Y = read.delim(paste(sep="", args[1], ".csv"), sep=",", header=TRUE)
-X = read.delim(paste(sep="", args[1], "_sig.csv"), sep=",", header=TRUE)
 colnames(Y) <- c("time","count")
-colnames(X) <- c("time","count","signal_type")
 Y$date <- as.POSIXct(Y$time, format="%Y-%m-%dT%H:%M:%S")
-X$date <- as.POSIXct(X$time, format="%Y-%m-%dT%H:%M:%S")
 ##############
-png(filename = paste(sep="", args[2], ".png"), width = 850, height = 500, units = 'px')
+png(filename = paste(sep="", args[2], ".png"), width = 750, height = 400, units = 'px')
     ggplot(data=Y) +
 	geom_point(aes(date, count), size=1) + 
 	geom_line(aes(date, count), color="#00aced", size=1) + 
@@ -30,12 +27,17 @@ png(filename = paste(sep="", args[2], ".png"), width = 850, height = 500, units 
     theme(legend.position = 'none', text = element_text(size=20))
 dev.off()
 ##############
-Y$signal_type = "time_line"
-X = rbind(X,Y)
-png(filename = paste(sep="", args[2], "_sig.png"), width = 850, height = 500, units = 'px')
+Y$signal_type = as.factor("1_time_line")
+
+X1 = read.delim(paste(sep="", args[1], "_sig.csv"), sep=",", header=TRUE)
+colnames(X1) <- c("time","count","signal_type")
+X1$date <- as.POSIXct(X1$time, format="%Y-%m-%dT%H:%M:%S")
+X1$signal_type <- as.factor(X1$signal_type)
+X = rbind(X1,Y)
+#X$signal_type <- factor(X$signal_type, order(X$signal_type))
+png(filename = paste(sep="", args[2], "_sig.png"), width = 750, height = 900, units = 'px')
     ggplot(data=X) +
-	geom_point(aes(date, count), size=1) + 
-	geom_line(aes(date, count), color="#00aced", size=1) + 
+	geom_line(aes(date, count, color=signal_type), size=1) + 
     facet_wrap(~signal_type, ncol=1, scale="free_y") +
     labs(title = args[3]) +
     xlab("date and time (UTC)") +
@@ -43,20 +45,22 @@ png(filename = paste(sep="", args[2], "_sig.png"), width = 850, height = 500, un
     theme(legend.position = 'none', text = element_text(size=20))
 dev.off()
 ##############
-#png(filename = paste(sep="", args[2], "_hist.png"), width = 850, height = 500, units = 'px')
-#    ggplot(data=Y) +
-#	 geom_histogram(aes(count), fill="#00aced") + 
-#    labs(title = args[3]) +
-#    xlab(paste("tweets/",args[4],sep="")) +
-#    ylab("count") + 
-#    theme(legend.position = 'none', text = element_text(size=20))
-#dev.off()
-##############
 for (i in 1:6) {
     print(paste(sep="", args[1], "_", i, "_freq.csv"))
     Z = read.delim(paste(sep="", args[1], "_", i, "_freq.csv"), sep=",", header=TRUE)
-    png(filename = paste(sep="", args[2], "_", i, "_treemap.png"), width = 850, height = 500, units = 'px')
+
+    png(filename = paste(sep="", args[2], "_", i, "_treemap.png"), width = 750, height = 750, units = 'px')
         treemap(Z, index=c("tokens"), vSize="percent.of.total")
     dev.off()
+    ##############
+    Z <- transform(Z, tokens=reorder(tokens, total.count))
+    png(filename = paste(sep="", args[2], "_", i, "_points.png"), width = 750, height = 900, units = 'px')
+        print(ggplot(data=Z, aes(y=tokens, x=total.count, color=n_gram, size=1.5)) + 
+            geom_point(stat="identity") +
+            #facet_wrap(~n_gram, ncol=1) +
+            labs(title = args[3]) +
+            theme(text = element_text(size=20))
+)
+    dev.off()
 }
-summary(Y) 
+summary(X) 
