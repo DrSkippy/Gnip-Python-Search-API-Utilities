@@ -19,13 +19,12 @@ sys.stdin = codecs.getreader('utf-8')(sys.stdin)
 
 DEFAULT_CONFIG_FILENAME = "./.gnip"
 
-class GnipSearchCMD(GnipSearchAPI):
+class GnipSearchCMD(GnipSearchAnalysis):
 
     USE_CASES = ["json", "wordcount","users", "rate", "links", "timeline", "geo"]
     
     def __init__(self, token_list_size=20):
         # default tokenizer and character limit
-        space_tokenizer = False
         char_upper_cutoff = 20  # longer than for normal words because of user names
         self.token_list_size = int(token_list_size)
         #############################################
@@ -59,13 +58,12 @@ class GnipSearchCMD(GnipSearchAPI):
         if self.options.stream_url is not None:
             self.stream_url = self.options.stream_url
         #############################################
-        super(GnipSearchCMD, self).__init__(
+        super(GnipSearchAnalysis, self).__init__(
             self.user
             , self.password
             , self.stream_url
             , self.options.paged
             , self.options.output_file_path
-            , self.token_list_size
             )
 
     def config_file(self):
@@ -118,16 +116,103 @@ class GnipSearchCMD(GnipSearchAPI):
                 help="Create files in ./OUTPUT-FILE-PATH. This path must exists and will not be created. This options is available only with -a option. Default is no output files.")
         return twitter_parser
     
-    def __call__(self):
-        return self.get_repr(
-            self.options.filter
-            , self.options.max
-            , self.options.use_case
-            , self.options.start
-            , self.options.end
-            , self.options.count_bucket 
-            , self.options.csv_flag
-            , self.options.query)
-    
+    def get_result(self):
+        WIDTH = 80
+        BIG_COLUMN = 32
+        res = [u"-"*WIDTH]
+        if self.options.use_case.startswith("rate"):
+            self.get(pt_filter=self.options.filter
+                , max_results=self.options.max
+                , start=self.options.start
+                , end=self.options.end
+                , count_bucket=None 
+                , query=self.options.query)
+            rate = self.get_rate()
+            unit = "Tweets/Minute"
+            if rate < 0.01:
+                rate *= 60.
+                unit = "Tweets/Hour"
+            res.append("     PowerTrack Rule: \"%s\""%self.options.filter)
+            res.append("  Oldest Tweet (UTC): %s"%str(self.oldest_t))
+            res.append("  Newest Tweet (UTC): %s"%str(self.newest_t))
+            res.append("           Now (UTC): %s"%str(datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")))
+            res.append("        %5d Tweets: %6.3f %s"%(self.res_cnt, rate, unit))
+            res.append("-"*WIDTH)
+        elif self.options.use_case.startswith("geo"):
+            res = []
+            for x in self.get_geo(pt_filter=self.options.filter
+                    , max_results=self.options.max
+                    , start=self.options.start
+                    , end=self.options.end
+                    , count_bucket=None 
+                    , query=self.options.query):
+                if self.options.csv_flag:
+                    try:
+                        res.append("{},{},{},{}".format(x["id"], x["postedTime"], x["longitude"], x["latitude"]))
+                    except KeyError, e:
+                        print >> sys.stderr, str(e)
+                else:
+                    res.append(json.dumps(x))
+        elif self.options.use_case.startswith("json"):
+            res = [json.dumps(x) for x in self.get_records(
+                    pt_filter=self.options.filter
+                    , max_results=self.options.max
+                    , start=self.options.start
+                    , end=self.options.end
+                    , count_bucket=None 
+                    , query=self.options.query)]
+        elif self.options.use_case.startswith("word"):
+            fmt_str = u"%{}s -- %10s     %8s ".format(BIG_COLUMN)
+            res.append(fmt_str%( "terms", "mentions", "activities"))
+            res.append("-"*WIDTH)
+            fmt_str =  u"%{}s -- %4d  %5.2f%% %4d  %5.2f%%".format(BIG_COLUMN)
+            for x in self.get_top_grams(pt_filter=self.options.filter
+                    , max_results=self.options.max
+                    , start=self.options.start
+                    , end=self.options.end
+                    , count_bucket=None 
+                    , query=self.options.query):
+                res.append(fmt_str%(x[4], x[0], x[1]*100., x[2], x[3]*100.))
+            res.append("    TOTAL: %d activities"%self.res_cnt)
+            res.append("-"*WIDTH)
+        elif self.options.use_case.startswith("user"):
+            fmt_str = u"%{}s -- %10s     %8s ".format(BIG_COLUMN)
+            res.append(fmt_str%( "terms", "mentions", "activities"))
+            res.append("-"*WIDTH)
+            fmt_str =  u"%{}s -- %4d  %5.2f%% %4d  %5.2f%%".format(BIG_COLUMN)
+            for x in self.get_top_users(pt_filter=self.options.filter
+                    , max_results=self.options.max
+                    , start=self.options.start
+                    , end=self.options.end
+                    , count_bucket=None 
+                    , query=self.options.query):
+                res.append(fmt_str%(x[4], x[0], x[1]*100., x[2], x[3]*100.))
+            res.append("    TOTAL: %d activities"%self.res_cnt)
+            res.append("-"*WIDTH)
+        elif self.options.use_case.startswith("time"):
+            res = []
+            for x in self.get_time_series(pt_filter=self.options.filter
+                    , max_results=self.options.max
+                    , start=self.options.start
+                    , end=self.options.end
+                    , count_bucket="hour"
+                    , query=self.options.query):
+                res.append("{:%Y-%m-%dT%H:%M:%S},{},{}".format(x[2], x[0], x[1]))
+        elif self.options.use_case.startswith("link"):
+            list(self.get_top_links(pt_filter=self.options.filter
+                , max_results=self.options.max
+                , start=self.options.start
+                , end=self.options.end
+                , count_bucket=None 
+                , query=self.options.query))
+            res[-1]+=u"-"*WIDTH
+            res.append(u"%100s -- %10s     %8s (%d)"%("links", "mentions", "activities", self.res_cnt))
+            res.append("-"*2*WIDTH)
+            for x in self.freq.get_tokens(self.token_list_size):
+                res.append(u"%100s -- %4d  %5.2f%% %4d  %5.2f%%"%(x[4], x[0], x[1]*100., x[2], x[3]*100.))
+            res.append("-"*WIDTH)
+        return u"\n".join(res)
+
 if __name__ == "__main__":
-    print GnipSearchCMD()()
+    g = GnipSearchCMD()
+    print unicode(g.get_result())
