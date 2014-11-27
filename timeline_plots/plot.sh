@@ -22,19 +22,24 @@ echo "           - r with ggplot and treemap libraries"
 echo "           - python numpy and scipy"
 # echo "           - python package https://github.com/hildensia/bayesian_changepoint_detection/tree/master/"
 echo "######################################################################"
-
 # can use minute, hour, day for bucket size
 BUCKET_SIZE=hour
 if [ ! -d ./examples ]; then
     mkdir ./examples
 fi
+
+# Timeline Search
 search_api.py -f"$1" -cb$BUCKET_SIZE timeline > "./examples/$2.csv" &
-#search_api.py -f"$1" -n500 json | jq ".body" | term_frequency.py -w -n20 > "./examples/${2}_freq.csv" &
 wait
+
+# Signal processing
 cat "./examples/${2}.csv" | ./signal.py | grep -v "scipy" > "./examples/${2}_sig.csv"
+# build n-gram queries
 cat "./examples/${2}_sig.csv" | "./make_query_str.py" "${1}" "${2}" > "./${2}_queries.sh"
+# run n-gram queries we built
 . ./${2}_queries.sh
-wait
+
+# Plots!
 ./plot.r "./examples/$2" "./examples/$2" "$1" "$BUCKET_SIZE"
 if [ $(uname) == "Darwin" ]; then
     # on OSX, if you want to immediatly see your plot
@@ -43,4 +48,3 @@ if [ $(uname) == "Darwin" ]; then
     open ./examples/${2}.png
     open ./examples/${2}_sig.png
 fi
-#search_api.py -f"$1" -n500 wordcount
