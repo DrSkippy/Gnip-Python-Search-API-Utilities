@@ -16,7 +16,7 @@ if (length(args) != 4) {
 Y = read.delim(paste(sep="", args[1], ".csv"), sep=",", header=TRUE)
 X = read.delim(paste(sep="", args[1], "_sig.csv"), sep=",", header=TRUE)
 colnames(Y) <- c("time","count")
-colnames(X) <- c("time","count")
+colnames(X) <- c("time","count","signal_type")
 Y$date <- as.POSIXct(Y$time, format="%Y-%m-%dT%H:%M:%S")
 X$date <- as.POSIXct(X$time, format="%Y-%m-%dT%H:%M:%S")
 ##############
@@ -24,7 +24,19 @@ png(filename = paste(sep="", args[2], ".png"), width = 850, height = 500, units 
     ggplot(data=Y) +
 	geom_point(aes(date, count), size=1) + 
 	geom_line(aes(date, count), color="#00aced", size=1) + 
-	geom_line(data=X, aes(date, count), color="green", alpha=0.6,size=1) + 
+    labs(title = args[3]) +
+    xlab("date and time (UTC)") +
+    ylab(paste("tweets/",args[4],sep="")) +
+    theme(legend.position = 'none', text = element_text(size=20))
+dev.off()
+##############
+Y$signal_type = "time_line"
+X = rbind(X,Y)
+png(filename = paste(sep="", args[2], "_sig.png"), width = 850, height = 500, units = 'px')
+    ggplot(data=X) +
+	geom_point(aes(date, count), size=1) + 
+	geom_line(aes(date, count), color="#00aced", size=1) + 
+    facet_wrap(~signal_type, ncol=1, scale="free_y") +
     labs(title = args[3]) +
     xlab("date and time (UTC)") +
     ylab(paste("tweets/",args[4],sep="")) +

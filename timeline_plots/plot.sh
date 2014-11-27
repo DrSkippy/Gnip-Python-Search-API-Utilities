@@ -41,5 +41,6 @@ if [ $(uname) == "Darwin" ]; then
     # open "./examples/${2}_hist.png"
     open ./examples/${2}_*_treemap.png
     open ./examples/${2}.png
+    open ./examples/${2}_sig.png
 fi
 #search_api.py -f"$1" -n500 wordcount
