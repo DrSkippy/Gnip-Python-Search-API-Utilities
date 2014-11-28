@@ -43,7 +43,7 @@ dates = []
 data = []
 # read data in date, count format
 for row in csv.reader(sys.stdin):
-    data.append(float(row[1]))
+    data.append(float(row[2]))
     dates.append(datetime.datetime.strptime(row[0], FMT))
 
 ####################################################################
@@ -86,10 +86,10 @@ for p in top_peaks:
     i = p-1
     while data[i] >= data[p-1]:
         i += 1
-    wrtr.writerow([dates[p-1].strftime(FMT), 0, "2_peaks"])
-    wrtr.writerow([dates[p-1].strftime(FMT), data[p+1], "2_peaks"])
-    wrtr.writerow([dates[i].strftime(FMT), data[p+1], "2_peaks"])
-    wrtr.writerow([dates[i].strftime(FMT), 0, "2_peaks"])
+    wrtr.writerow([dates[p-1].strftime(FMT), 0, 0, "2_peaks"])
+    wrtr.writerow([dates[p-1].strftime(FMT), 0, data[p+1], "2_peaks"])
+    wrtr.writerow([dates[i].strftime(FMT), 0, data[p+1], "2_peaks"])
+    wrtr.writerow([dates[i].strftime(FMT), 0, 0, "2_peaks"])
 
 ####################################################################
 # stats models trend and cycle
@@ -97,9 +97,9 @@ for p in top_peaks:
 cycle, trend = sm.tsa.filters.hpfilter(numpy.array(data))
 
 for i in range(len(dates)):
-    wrtr.writerow([dates[i].strftime(FMT), cycle[i], "3_tc_cycle"])
+    wrtr.writerow([dates[i].strftime(FMT), 0, cycle[i], "3_tc_cycle"])
 for i in range(len(dates)):
-    wrtr.writerow([dates[i].strftime(FMT), trend[i], "4_tc_trend"])
+    wrtr.writerow([dates[i].strftime(FMT), 0, trend[i], "4_tc_trend"])
 
 ####################################################################
 # change point detection
@@ -110,5 +110,5 @@ Q, P, Pcp = offcd.offline_changepoint_detection(trend
         , offcd.gaussian_obs_log_likelihood, truncate=-20)
 
 for d,x in zip(dates, list(numpy.exp(Pcp).sum(0))):
-    wrtr.writerow([d.strftime(FMT), x, "5_change_points"])
+    wrtr.writerow([d.strftime(FMT), 0, x, "5_change_points"])
 

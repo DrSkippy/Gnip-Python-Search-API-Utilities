@@ -14,7 +14,7 @@ if (length(args) != 4) {
 }
 ##############
 Y = read.delim(paste(sep="", args[1], ".csv"), sep=",", header=TRUE)
-colnames(Y) <- c("time","count")
+colnames(Y) <- c("time","ts","count")
 Y$date <- as.POSIXct(Y$time, format="%Y-%m-%dT%H:%M:%S")
 ##############
 png(filename = paste(sep="", args[2], ".png"), width = 750, height = 400, units = 'px')
@@ -30,7 +30,7 @@ dev.off()
 Y$signal_type = as.factor("1_time_line")
 
 X1 = read.delim(paste(sep="", args[1], "_sig.csv"), sep=",", header=TRUE)
-colnames(X1) <- c("time","count","signal_type")
+colnames(X1) <- c("time","ts","count","signal_type")
 X1$date <- as.POSIXct(X1$time, format="%Y-%m-%dT%H:%M:%S")
 X1$signal_type <- as.factor(X1$signal_type)
 X = rbind(X1,Y)
