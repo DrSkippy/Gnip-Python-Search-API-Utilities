@@ -161,7 +161,7 @@ class GnipSearchAPI(object):
 
     def get_list_set(self):
         for rec in self.get_record_set():
-            yield self.twitter_parser.procRecordToList(rec)
+            yield self.twitter_parser.get_source_list(rec)
 
     def query_api(self
             , pt_filter

@@ -122,7 +122,7 @@ class GnipSearchCMD(GnipSearchAnalysis):
         res = [u"-"*WIDTH]
         if self.options.use_case.startswith("rate"):
             self.get(pt_filter=self.options.filter
-                , max_results=self.options.max
+                    , max_results=int(self.options.max)
                 , start=self.options.start
                 , end=self.options.end
                 , count_bucket=None 
@@ -141,7 +141,7 @@ class GnipSearchCMD(GnipSearchAnalysis):
         elif self.options.use_case.startswith("geo"):
             res = []
             for x in self.get_geo(pt_filter=self.options.filter
-                    , max_results=self.options.max
+                    , max_results=int(self.options.max)
                     , start=self.options.start
                     , end=self.options.end
                     , count_bucket=None 
@@ -156,18 +156,20 @@ class GnipSearchCMD(GnipSearchAnalysis):
         elif self.options.use_case.startswith("json"):
             res = [json.dumps(x) for x in self.get_records(
                     pt_filter=self.options.filter
-                    , max_results=self.options.max
+                    , max_results=int(self.options.max)
                     , start=self.options.start
                     , end=self.options.end
                     , count_bucket=None 
                     , query=self.options.query)]
+            if self.options.csv_flag:
+                res = ["|".join(x) for x in self.get_list_set()]
         elif self.options.use_case.startswith("word"):
             fmt_str = u"%{}s -- %10s     %8s ".format(BIG_COLUMN)
             res.append(fmt_str%( "terms", "mentions", "activities"))
             res.append("-"*WIDTH)
             fmt_str =  u"%{}s -- %4d  %5.2f%% %4d  %5.2f%%".format(BIG_COLUMN)
             for x in self.get_top_grams(pt_filter=self.options.filter
-                    , max_results=self.options.max
+                    , max_results=int(self.options.max)
                     , start=self.options.start
                     , end=self.options.end
                     , count_bucket=None 
@@ -181,7 +183,7 @@ class GnipSearchCMD(GnipSearchAnalysis):
             res.append("-"*WIDTH)
             fmt_str =  u"%{}s -- %4d  %5.2f%% %4d  %5.2f%%".format(BIG_COLUMN)
             for x in self.get_top_users(pt_filter=self.options.filter
-                    , max_results=self.options.max
+                    , max_results=int(self.options.max)
                     , start=self.options.start
                     , end=self.options.end
                     , count_bucket=None 
@@ -192,7 +194,7 @@ class GnipSearchCMD(GnipSearchAnalysis):
         elif self.options.use_case.startswith("time"):
             res = []
             for x in self.get_time_series(pt_filter=self.options.filter
-                    , max_results=self.options.max
+                    , max_results=int(self.options.max)
                     , start=self.options.start
                     , end=self.options.end
                     , count_bucket="hour"
@@ -200,7 +202,7 @@ class GnipSearchCMD(GnipSearchAnalysis):
                 res.append("{:%Y-%m-%dT%H:%M:%S},{},{}".format(x[2], x[0], x[1]))
         elif self.options.use_case.startswith("link"):
             list(self.get_top_links(pt_filter=self.options.filter
-                , max_results=self.options.max
+                , max_results=int(self.options.max)
                 , start=self.options.start
                 , end=self.options.end
                 , count_bucket=None 
