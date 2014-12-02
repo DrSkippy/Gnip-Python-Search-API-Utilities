@@ -11,16 +11,16 @@ import time
 # establish import context and then import explicitly 
 #from .context import gpt
 #from gpt.rules import rules as gpt_r
-from gnip_search_analysis import *
+from data_elements import *
 
-class TestGnipSearchAnalysis(unittest.TestCase):
+class TestQueryElements(unittest.TestCase):
     
     def setUp(self):
-        self.g = GnipSearchAnalysis("shendrickson@gnip.com"
-            , "XXXXXPASSWORDXXXXX"
+        self.g = QueryElements("shendrickson@gnip.com"
+            , "XXXXXXXXXXXXX"
             , "https://search.gnip.com/accounts/shendrickson/search/wayback.json")
-        self.g_paged = GnipSearchAnalysis("shendrickson@gnip.com"
-            , "XXXXXPASSWORDXXXXX"
+        self.g_paged = QueryElements("shendrickson@gnip.com"
+            , "XXXXXXXXXXXXX"
             , "https://search.gnip.com/accounts/shendrickson/search/wayback.json"
             , paged = True
             , output_file_path = ".")
@@ -51,15 +51,15 @@ class TestGnipSearchAnalysis(unittest.TestCase):
         # make sure we have exactly the same data set, not a new one
         self.assertEquals(tmp, self.g.rec_list_list)
 
-    def test_get_records(self):
-        for x in self.g.get_records(pt_filter = "bieber" 
+    def test_get_activities(self):
+        for x in self.g.get_activities(pt_filter = "bieber" 
                 , max_results = 10
                 , start = None
                 , end = None
                 , count_bucket = None
                 , query = False):
             self.assertTrue("id" in x)
-        self.assertEqual(len(list( self.g.get_records(pt_filter = "bieber" 
+        self.assertEqual(len(list( self.g.get_activities(pt_filter = "bieber" 
                 , max_results = 10
                 , start = None
                 , end = None
@@ -72,7 +72,7 @@ class TestGnipSearchAnalysis(unittest.TestCase):
         tmp_end = datetime.datetime.strftime(
                     datetime.datetime.now() 
                     ,"%Y-%m-%dT%H:%M:%S")
-        self.assertGreater(len(list(self.g_paged.get_records(pt_filter = "bieber"
+        self.assertGreater(len(list(self.g_paged.get_activities(pt_filter = "bieber"
                 , start = tmp_start
                 , end = tmp_end))), 1000)
         

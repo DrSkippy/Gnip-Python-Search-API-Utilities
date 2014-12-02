@@ -9,7 +9,7 @@ import time
 import os
 import re
 
-from gnip_search_api import *
+from api import *
 from simple_n_grams.simple_n_grams import SimpleNGrams
 
 reload(sys)
@@ -22,11 +22,10 @@ DATE_INDEX = 1
 TEXT_INDEX = 2
 LINKS_INDEX = 3
 USER_NAME_INDEX = 7 
-WIDTH = 120 
-BIG_COLUMN = 32
+OUTPUT_PAGE_WIDTH = 120 
+BIG_COLUMN_WIDTH = 32
 
-
-class GnipSearchAnalysis(GnipSearchAPI):
+class QueryElements(Query):
 
     query_keys = [ "pt_filter"
                     , "max_results"
@@ -55,9 +54,9 @@ class GnipSearchAnalysis(GnipSearchAPI):
             self.freq = None
             # else nothing new to do
 
-    def get_records(self, **kwargs):
+    def get_activities(self, **kwargs):
         self.get(**kwargs)
-        for x in self.get_record_set():
+        for x in self.get_activity_set():
             yield x
 
     def get_time_series(self, **kwargs):
@@ -94,16 +93,16 @@ class GnipSearchAnalysis(GnipSearchAPI):
             
     def get_geo(self, **kwargs):
         self.get(**kwargs)
-        for rec in self.get_record_set():
+        for rec in self.get_activity_set():
             lat, lng = None, None
             if "geo" in rec:
                 if "coordinates" in rec["geo"]:
                     [lat,lng] = rec["geo"]["coordinates"]
-                    record = { "id": rec["id"].split(":")[2]
+                    activity = { "id": rec["id"].split(":")[2]
                         , "postedTime": rec["postedTime"].strip(".000Z")
                         , "latitude": lat
                         , "longitude": lng }
-                    yield record
+                    yield activity
  
     def get_frequency_items(self, size = 20):
         """Retrieve the token list structure from the last query"""
@@ -113,7 +112,7 @@ class GnipSearchAnalysis(GnipSearchAPI):
 
     def __repr__(self):
         if self.last_query_params["count_bucket"] is None:
-            res = [u"-"*WIDTH]
+            res = [u"-"*OUTPUT_PAGE_WIDTH]
             rate = self.get_rate()
             unit = "Tweets/Minute"
             if rate < 0.01:
@@ -124,46 +123,46 @@ class GnipSearchAnalysis(GnipSearchAPI):
             res.append("  Newest Tweet (UTC): %s"%str(self.newest_t))
             res.append("           Now (UTC): %s"%str(datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")))
             res.append("        %5d Tweets: %6.3f %s"%(self.res_cnt, rate, unit))
-            res.append("-"*WIDTH)
+            res.append("-"*OUTPUT_PAGE_WIDTH)
             #
             self.get_top_users(**self.last_query_params)
-            fmt_str = u"%{}s -- %10s     %8s (%d)".format(BIG_COLUMN)
+            fmt_str = u"%{}s -- %10s     %8s (%d)".format(BIG_COLUMN_WIDTH)
             res.append(fmt_str%( "users", "tweets", "activities", self.res_cnt))
-            res.append("-"*WIDTH)
-            fmt_str =  u"%{}s -- %4d  %5.2f%% %4d  %5.2f%%".format(BIG_COLUMN)
+            res.append("-"*OUTPUT_PAGE_WIDTH)
+            fmt_str =  u"%{}s -- %4d  %5.2f%% %4d  %5.2f%%".format(BIG_COLUMN_WIDTH)
             for x in self.freq.get_tokens(20):
                 res.append(fmt_str%(x[4], x[0], x[1]*100., x[2], x[3]*100.))
-            res.append("-"*WIDTH)
+            res.append("-"*OUTPUT_PAGE_WIDTH)
             #
             self.get_top_links(**self.last_query_params)
-            fmt_str = u"%{}s -- %10s     %8s (%d)".format(int(2.5*BIG_COLUMN))
+            fmt_str = u"%{}s -- %10s     %8s (%d)".format(int(2.5*BIG_COLUMN_WIDTH))
             res.append(fmt_str%( "links", "mentions", "activities", self.res_cnt))
-            res.append("-"*WIDTH)
-            fmt_str =  u"%{}s -- %4d  %5.2f%% %4d  %5.2f%%".format(int(2.5*BIG_COLUMN))
+            res.append("-"*OUTPUT_PAGE_WIDTH)
+            fmt_str =  u"%{}s -- %4d  %5.2f%% %4d  %5.2f%%".format(int(2.5*BIG_COLUMN_WIDTH))
             for x in self.freq.get_tokens(20):
                 res.append(fmt_str%(x[4], x[0], x[1]*100., x[2], x[3]*100.))
-            res.append("-"*WIDTH)
+            res.append("-"*OUTPUT_PAGE_WIDTH)
             #
             self.get_top_grams(**self.last_query_params)
-            fmt_str = u"%{}s -- %10s     %8s (%d)".format(BIG_COLUMN)
+            fmt_str = u"%{}s -- %10s     %8s (%d)".format(BIG_COLUMN_WIDTH)
             res.append(fmt_str%( "terms", "mentions", "activities", self.res_cnt))
-            res.append("-"*WIDTH)
-            fmt_str =u"%{}s -- %4d  %5.2f%% %4d  %6.2f%%".format(BIG_COLUMN)
+            res.append("-"*OUTPUT_PAGE_WIDTH)
+            fmt_str =u"%{}s -- %4d  %5.2f%% %4d  %6.2f%%".format(BIG_COLUMN_WIDTH)
             for x in self.freq.get_tokens(20):
                 res.append(fmt_str%(x[4], x[0], x[1]*100., x[2], x[3]*100.))
-            res.append("-"*WIDTH)
+            res.append("-"*OUTPUT_PAGE_WIDTH)
         else:
             res = ["{:%Y-%m-%dT%H:%M:%S},{}".format(x[2], x[1])
                         for x in self.time_series]
         return u"\n".join(res)
 
 if __name__ == "__main__":
-    g = GnipSearchAnalysis("shendrickson@gnip.com"
+    g = QueryElements("shendrickson@gnip.com"
             , "XXXXXPASSWORDXXXXX"
             , "https://search.gnip.com/accounts/shendrickson/search/wayback.json")
     list(g.get_time_series(pt_filter="bieber", count_bucket="hour"))
     print unicode(g)
-    print list(g.get_records(pt_filter="bieber", max_results = 10))
+    print list(g.get_activities(pt_filter="bieber", max_results = 10))
     print list(g.get_geo(pt_filter = "bieber has:geo", max_results = 10))
     print list(g.get_time_series(pt_filter="beiber", count_bucket="hour"))
     print list(g.get_top_links(pt_filter="beiber", max_results=100, n=30))

@@ -25,7 +25,7 @@ POSTED_TIME_IDX = 1
 #date time parsing utility regex
 DATE_TIME_RE = re.compile("([0-9]{4}).([0-9]{2}).([0-9]{2}).([0-9]{2}):([0-9]{2})")
 
-class GnipSearchAPI(object):
+class Query(object):
     
     def __init__(self
             , user
@@ -39,7 +39,7 @@ class GnipSearchAPI(object):
         self.paged_file_list = []
         self.user = user
         self.password = password
-        self.end_point = stream_url # records end point NOT the counts end point
+        self.end_point = stream_url # activities end point NOT the counts end point
         # get a parser for the twitter columns
         # TODO: use the updated retriveal methods in gnacs instead of this
         self.twitter_parser = TwacsCSV(",", None, False, True, False, True, False, False, False)
@@ -83,7 +83,7 @@ class GnipSearchAPI(object):
         f = f.replace(')','_p_') 
         self.file_name_prefix = f[:42]
 
-    def req(self):
+    def request(self):
         """HTTP request based on class variables for rule_payload, stream_url, user and password"""
         try:
             s = requests.Session()
@@ -102,13 +102,13 @@ class GnipSearchAPI(object):
         #Don't use res.text -- creates encoding challenges!
         return unicode(res.content, "utf-8")
 
-    def parse_JSON(self):
+    def parse_responses(self):
         acs = []
         repeat = True
         page_count = 1
         self.paged_file_list = []
         while repeat:
-            doc = self.req()
+            doc = self.request()
             try:
                 tmp_response =  json.loads(doc)
                 if "results" in tmp_response:
@@ -116,7 +116,7 @@ class GnipSearchAPI(object):
                 if "error" in tmp_response:
                     raise ValueError("Invalid request\nQuery: %s\nResponse: %s"%(self.rule_payload, doc))
             except ValueError, e:
-                e.msg = "Error. Failed to retrieve valid JSON records:\n%s"%e
+                e.msg = "Error. Failed to retrieve valid JSON activities:\n%s"%e
                 raise e
             # 
             repeat = False
@@ -148,8 +148,8 @@ class GnipSearchAPI(object):
                 time.sleep(PAUSE)
         return acs
 
-    def get_record_set(self):
-        """Iterates through the entire record set from memory or disk."""
+    def get_activity_set(self):
+        """Iterates through the entire activity set from memory or disk."""
         if self.paged:
             for file_name in self.paged_file_list:
                 with codecs.open(file_name,"rb") as f:
@@ -160,7 +160,7 @@ class GnipSearchAPI(object):
                 yield res
 
     def get_list_set(self):
-        for rec in self.get_record_set():
+        for rec in self.get_activity_set():
             yield self.twitter_parser.get_source_list(rec)
 
     def query_api(self
@@ -211,9 +211,9 @@ class GnipSearchAPI(object):
         # actual newest tweet more recent that 30 days ago
         self.newest_t = datetime.datetime.utcnow() - datetime.timedelta(days=30)
         #
-        for rec in self.parse_JSON():
-            # parse_JSON returns only the last set of records retrieved, not all paged results.
-            # to access the entire set, use the helper functions get_record_set and get_list_set!
+        for rec in self.parse_responses():
+            # parse_responses returns only the last set of activities retrieved, not all paged results.
+            # to access the entire set, use the helper functions get_activity_set and get_list_set!
             self.res_cnt += 1
             self.rec_dict_list.append(rec)
             if count_bucket:
@@ -221,13 +221,13 @@ class GnipSearchAPI(object):
                 t = datetime.datetime.strptime(rec["timePeriod"], TIME_FORMAT_SHORT)
                 tmp_tl_list = [rec["timePeriod"], rec["count"], t]
             else:
-                # json records
+                # json activities
                 tmp_list = self.twitter_parser.procRecordToList(rec)
                 self.rec_list_list.append(tmp_list)
                 t = datetime.datetime.strptime(tmp_list[POSTED_TIME_IDX], TIME_FORMAT_LONG)
                 tmp_tl_list = [tmp_list[POSTED_TIME_IDX], 1, t]
             self.time_series.append(tmp_tl_list)
-            # timeline reqeusts don't return records!
+            # timeline reqeusts don't return activities!
             if t < self.oldest_t:
                 self.oldest_t = t
             if t > self.newest_t:
@@ -255,18 +255,18 @@ class GnipSearchAPI(object):
             return "No query completed."
 
 if __name__ == "__main__":
-    g = GnipSearchAPI("shendrickson@gnip.com"
+    g = Query("shendrickson@gnip.com"
             , "XXXXXPASSWORDXXXXX"
             , "https://search.gnip.com/accounts/shendrickson/search/wayback.json")
     g.query_api("bieber", 10)
-    for x in g.get_record_set():
+    for x in g.get_activity_set():
         print x
     print g
     print g.get_rate()
     g.query_api("bieber", count_bucket = "hour")
     print g
     print len(g)
-    pg = GnipSearchAPI("shendrickson@gnip.com"
+    pg = Query("shendrickson@gnip.com"
             , "XXXXXPASSWORDXXXXX"
             , "https://search.gnip.com/accounts/shendrickson/search/wayback.json"
             , paged = True 
@@ -275,6 +275,6 @@ if __name__ == "__main__":
     pg.query_api("bieber"
             , end=now_date.strftime(TIME_FORMAT_LONG)
             , start=(now_date - datetime.timedelta(seconds=200)).strftime(TIME_FORMAT_LONG))
-    for x in pg.get_record_set():
+    for x in pg.get_activity_set():
         print x
     g.query_api("bieber", query=True)

@@ -9,16 +9,16 @@ import os
 # establish import context and then import explicitly 
 #from .context import gpt
 #from gpt.rules import rules as gpt_r
-from gnip_search_api import *
+from api import *
 
-class TestGnipSearchAPI(unittest.TestCase):
+class TestQuery(unittest.TestCase):
     
     def setUp(self):
-        self.g = GnipSearchAPI("shendrickson@gnip.com"
-            , "XXXXXPASSWORDXXXXX"
+        self.g = Query("shendrickson@gnip.com"
+            , "XXXXXXXXXXXXX"
             , "https://search.gnip.com/accounts/shendrickson/search/wayback.json")
-        self.g_paged = GnipSearchAPI("shendrickson@gnip.com"
-            , "XXXXXPASSWORDXXXXX"
+        self.g_paged = Query("shendrickson@gnip.com"
+            , "XXXXXXXXXXXXX"
             , "https://search.gnip.com/accounts/shendrickson/search/wayback.json"
             , paged = True
             , output_file_path = ".")
@@ -28,7 +28,6 @@ class TestGnipSearchAPI(unittest.TestCase):
         for f in os.listdir("."):
     	    if re.search("bieber.json", f):
     		os.remove(os.path.join(".", f))
-
 
     def test_set_dates(self):
         s = "2014-11-01T00:00:30"
@@ -61,30 +60,30 @@ class TestGnipSearchAPI(unittest.TestCase):
     def test_req(self):
         self.g.rule_payload = {'query': 'bieber', 'maxResults': 10, 'publisher': 'twitter'}
         self.g.stream_url = self.g.end_point
-        self.assertEquals(10, len(json.loads(self.g.req())["results"]))
+        self.assertEquals(10, len(json.loads(self.g.request())["results"]))
         self.g.stream_url = "adsfadsf"
         with self.assertRaises(requests.exceptions.MissingSchema) as cm:
-            self.g.req()
+            self.g.request()
         self.g.stream_url = "http://ww.thisreallydoesn'texist.com"
         with self.assertRaises(requests.exceptions.ConnectionError) as cm:
-            self.g.req()
+            self.g.request()
         self.g.stream_url = "https://ww.thisreallydoesntexist.com"
         with self.assertRaises(requests.exceptions.ConnectionError) as cm:
-            self.g.req()
+            self.g.request()
         
-    def test_parse_JSON(self):
+    def test_parse_responses(self):
         self.g.rule_payload = {'query': 'bieber', 'maxResults': 10, 'publisher': 'twitter'}
         self.g.stream_url = self.g.end_point
-        self.assertEquals(len(self.g.parse_JSON()), 10)
+        self.assertEquals(len(self.g.parse_responses()), 10)
         self.g.rule_payload = {'maxResults': 10, 'publisher': 'twitter'}
         self.g.stream_url = self.g.end_point
         with self.assertRaises(ValueError) as cm:
-            self.g.parse_JSON()
+            self.g.parse_responses()
         #TODO graceful way to test write to file functionality here
 
-    def test_get_record_set(self):
+    def test_get_activity_set(self):
         self.g.query_api("bieber", max_results=10)
-        self.assertEquals(len(list(self.g.get_record_set())), 10)
+        self.assertEquals(len(list(self.g.get_activity_set())), 10)
         # seconds of bieber
         tmp_start =  datetime.datetime.strftime(
                     datetime.datetime.now() + datetime.timedelta(seconds = -60)
@@ -96,7 +95,7 @@ class TestGnipSearchAPI(unittest.TestCase):
         self.g_paged.query_api("bieber"
                 , start = tmp_start
                 , end = tmp_end)
-        self.assertGreater(len(list(self.g_paged.get_record_set())), 500)
+        self.assertGreater(len(list(self.g_paged.get_activity_set())), 500)
 
     def test_query_api(self):
         #
