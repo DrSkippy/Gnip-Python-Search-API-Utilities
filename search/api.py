@@ -41,7 +41,7 @@ class Query(object):
         self.password = password
         self.end_point = stream_url # activities end point NOT the counts end point
         # get a parser for the twitter columns
-        # TODO: use the updated retriveal methods in gnacs instead of this
+        # TODO: use the updated retriveal methods in gnacs instead of this?
         self.twitter_parser = TwacsCSV(",", None, False, True, False, True, False, False, False)
 
     def set_dates(self, start, end):
@@ -163,7 +163,7 @@ class Query(object):
         for rec in self.get_activity_set():
             yield self.twitter_parser.get_source_list(rec)
 
-    def query_api(self
+    def execute(self
             , pt_filter
             , max_results = 100
             , start = None
@@ -258,12 +258,12 @@ if __name__ == "__main__":
     g = Query("shendrickson@gnip.com"
             , "XXXXXPASSWORDXXXXX"
             , "https://search.gnip.com/accounts/shendrickson/search/wayback.json")
-    g.query_api("bieber", 10)
+    g.execute("bieber", 10)
     for x in g.get_activity_set():
         print x
     print g
     print g.get_rate()
-    g.query_api("bieber", count_bucket = "hour")
+    g.execute("bieber", count_bucket = "hour")
     print g
     print len(g)
     pg = Query("shendrickson@gnip.com"
@@ -272,9 +272,9 @@ if __name__ == "__main__":
             , paged = True 
             , output_file_path = "../data/")
     now_date = datetime.datetime.now()
-    pg.query_api("bieber"
+    pg.execute("bieber"
             , end=now_date.strftime(TIME_FORMAT_LONG)
             , start=(now_date - datetime.timedelta(seconds=200)).strftime(TIME_FORMAT_LONG))
     for x in pg.get_activity_set():
         print x
-    g.query_api("bieber", query=True)
+    g.execute("bieber", query=True)

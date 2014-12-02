@@ -82,7 +82,7 @@ class TestQuery(unittest.TestCase):
         #TODO graceful way to test write to file functionality here
 
     def test_get_activity_set(self):
-        self.g.query_api("bieber", max_results=10)
+        self.g.execute("bieber", max_results=10)
         self.assertEquals(len(list(self.g.get_activity_set())), 10)
         # seconds of bieber
         tmp_start =  datetime.datetime.strftime(
@@ -92,12 +92,12 @@ class TestQuery(unittest.TestCase):
                     datetime.datetime.now() 
                     ,"%Y-%m-%dT%H:%M:%S")
         print >> sys.stderr, "bieber from ", tmp_start, " to ", tmp_end
-        self.g_paged.query_api("bieber"
+        self.g_paged.execute("bieber"
                 , start = tmp_start
                 , end = tmp_end)
         self.assertGreater(len(list(self.g_paged.get_activity_set())), 500)
 
-    def test_query_api(self):
+    def test_execute(self):
         #
         tmp = { "pt_filter": "bieber"
                 , "max_results" : 100
@@ -105,7 +105,7 @@ class TestQuery(unittest.TestCase):
                 , "end" : None
                 , "count_bucket" : None # None is json
                 , "query" : False }
-        self.g.query_api(**tmp)
+        self.g.execute(**tmp)
         self.assertEquals(len(self.g), 100)
         self.assertEquals(len(self.g.rec_list_list), 100)
         self.assertEquals(len(self.g.rec_dict_list), 100)
@@ -117,7 +117,7 @@ class TestQuery(unittest.TestCase):
                 , "end" : None
                 , "count_bucket" : None # None is json
                 , "query" : False }
-        self.g.query_api(**tmp)
+        self.g.execute(**tmp)
         self.assertEquals(len(self.g), 500)
         self.assertEquals(len(self.g.time_series), 500)
         self.assertEquals(len(self.g.rec_list_list), 500)
@@ -144,7 +144,7 @@ class TestQuery(unittest.TestCase):
                 , "end" : tmp_end
                 , "count_bucket" : None # None is json
                 , "query" : False }
-        self.g.query_api(**tmp)
+        self.g.execute(**tmp)
         self.assertEquals(len(self.g), 500)
         self.assertEquals(len(self.g.time_series), 500)
         self.assertEquals(len(self.g.rec_list_list), 500)
@@ -166,14 +166,14 @@ class TestQuery(unittest.TestCase):
                 , "count_bucket" : "fortnight"
                 , "query" : False }
         with self.assertRaises(ValueError) as cm:
-            self.g.query_api(**tmp)
+            self.g.execute(**tmp)
         #
         tmp = { "pt_filter": "bieber"
                 , "start" : None
                 , "end" : None
                 , "count_bucket" : "hour"
                 , "query" : False }
-        self.g.query_api(**tmp)
+        self.g.execute(**tmp)
         self.assertEquals(len(self.g), 24*30 + datetime.datetime.utcnow().hour + 1)
         self.assertGreater(self.g.delta_t, 24*30*60) # delta_t in minutes 
 
@@ -190,7 +190,7 @@ class TestQuery(unittest.TestCase):
                 , "max_results" : 500
                 , "count_bucket" : None # None is json
                 , "query" : False }
-        self.g.query_api(**tmp)
+        self.g.execute(**tmp)
         self.assertEquals(self.g.res_cnt, len(self.g))
 
     def test_repr(self):
@@ -199,7 +199,7 @@ class TestQuery(unittest.TestCase):
                 , "max_results" : 500
                 , "count_bucket" : None # None is json
                 , "query" : False }
-        self.g.query_api(**tmp)
+        self.g.execute(**tmp)
         self.assertIsNotNone(str(self.g))
         self.assertTrue('\n' in str(self.g))
         self.assertEquals(str(self.g).count('\n'), len(self.g)-1)

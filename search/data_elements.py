@@ -50,7 +50,7 @@ class QueryElements(Query):
             self.last_query_params = {}
             for k in self.query_keys:
                 self.last_query_params[k] = locals()[k] 
-            self.query_api(**self.last_query_params)
+            self.execute(**self.last_query_params)
             self.freq = None
             # else nothing new to do
 
@@ -171,4 +171,4 @@ if __name__ == "__main__":
     print list(g.get_frequency_items(10))
     print unicode(g)
     print g.get_rate()
-    g.query_api(pt_filter="bieber", query=True)
+    g.execute(pt_filter="bieber", query=True)
