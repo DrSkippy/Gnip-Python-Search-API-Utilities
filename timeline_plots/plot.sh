@@ -38,7 +38,6 @@ cat "./examples/${2}.csv" | ./signal.py | grep -v "scipy" > "./examples/${2}_sig
 cat "./examples/${2}_sig.csv" | "./make_query_str.py" "${1}" "${2}" > "./${2}_queries.sh"
 # run n-gram queries we built
 . ./${2}_queries.sh
-
 # Plots!
 ./plot.r "./examples/$2" "./examples/$2" "$1" "$BUCKET_SIZE"
 if [ $(uname) == "Darwin" ]; then
@@ -46,6 +45,7 @@ if [ $(uname) == "Darwin" ]; then
     # open "./examples/${2}_hist.png"
     open ./examples/${2}_*_treemap.png
     open ./examples/${2}_*_points.png
-    open ./examples/${2}.png
+    sleep 2
     open ./examples/${2}_sig.png
+    open ./examples/${2}.png
 fi
