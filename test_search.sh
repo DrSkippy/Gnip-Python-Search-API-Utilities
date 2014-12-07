@@ -13,9 +13,15 @@ if [ ! -d data ]; then
 fi
 
 rulez="bieber OR bieber"
-dt1=$(date -v-1d +%Y-%m-%dT00:00:00)
-dt2=$(date -v-2d +%Y-%m-%dT00:00:00)
-dt3=$(date -v-2d +%Y-%m-%dT23:55:00)
+if [ $(uname) == "Linux" ]; then
+    dt1=$(date --date="1 day ago" +%Y-%m-%dT00:00:00)
+    dt2=$(date --date="2 days ago" +%Y-%m-%dT00:00:00)
+    dt3=$(date --date="2 days ago" +%Y-%m-%dT23:55:00)
+else
+    dt1=$(date -v-1d +%Y-%m-%dT00:00:00)
+    dt2=$(date -v-2d +%Y-%m-%dT00:00:00)
+    dt3=$(date -v-2d +%Y-%m-%dT23:55:00)
+fi
 
 ./search.py -f"has:geo $rulez" -u ${un} -p ${paswd} -n10 -q json
 ./search.py -f"has:geo $rulez" -u ${un} -p ${paswd} -n10 json

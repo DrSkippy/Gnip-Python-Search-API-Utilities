@@ -11,7 +11,7 @@ import time
 import os
 import ConfigParser
 
-from search.data_elements import *
+from search.results import *
 
 reload(sys)
 sys.stdout = codecs.getwriter('utf-8')(sys.stdout)
@@ -19,7 +19,7 @@ sys.stdin = codecs.getreader('utf-8')(sys.stdin)
 
 DEFAULT_CONFIG_FILENAME = "./.gnip"
 
-class GnipSearchCMD(QueryElements):
+class GnipSearchCMD():
 
     USE_CASES = ["json", "wordcount","users", "rate", "links", "timeline", "geo"]
     
@@ -57,14 +57,6 @@ class GnipSearchCMD(QueryElements):
             self.password = self.options.password
         if self.options.stream_url is not None:
             self.stream_url = self.options.stream_url
-        #############################################
-        super(QueryElements, self).__init__(
-            self.user
-            , self.password
-            , self.stream_url
-            , self.options.paged
-            , self.options.output_file_path
-            )
 
     def config_file(self):
         config = ConfigParser.ConfigParser()
@@ -120,99 +112,88 @@ class GnipSearchCMD(QueryElements):
         WIDTH = 80
         BIG_COLUMN = 32
         res = [u"-"*WIDTH]
-        if self.options.use_case.startswith("rate"):
-            self.get(pt_filter=self.options.filter
-                    , max_results=int(self.options.max)
-                , start=self.options.start
-                , end=self.options.end
-                , count_bucket=None 
-                , query=self.options.query)
-            rate = self.get_rate()
-            unit = "Tweets/Minute"
-            if rate < 0.01:
-                rate *= 60.
-                unit = "Tweets/Hour"
-            res.append("     PowerTrack Rule: \"%s\""%self.options.filter)
-            res.append("  Oldest Tweet (UTC): %s"%str(self.oldest_t))
-            res.append("  Newest Tweet (UTC): %s"%str(self.newest_t))
-            res.append("           Now (UTC): %s"%str(datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")))
-            res.append("        %5d Tweets: %6.3f %s"%(self.res_cnt, rate, unit))
-            res.append("-"*WIDTH)
-        elif self.options.use_case.startswith("geo"):
-            res = []
-            for x in self.get_geo(pt_filter=self.options.filter
-                    , max_results=int(self.options.max)
-                    , start=self.options.start
-                    , end=self.options.end
-                    , count_bucket=None 
-                    , query=self.options.query):
-                if self.options.csv_flag:
-                    try:
-                        res.append("{},{},{},{}".format(x["id"], x["postedTime"], x["longitude"], x["latitude"]))
-                    except KeyError, e:
-                        print >> sys.stderr, str(e)
-                else:
-                    res.append(json.dumps(x))
-        elif self.options.use_case.startswith("json"):
-            res = [json.dumps(x) for x in self.get_activities(
-                    pt_filter=self.options.filter
-                    , max_results=int(self.options.max)
-                    , start=self.options.start
-                    , end=self.options.end
-                    , count_bucket=None 
-                    , query=self.options.query)]
-            if self.options.csv_flag:
-                res = ["|".join(x) for x in self.get_list_set()]
-        elif self.options.use_case.startswith("word"):
-            fmt_str = u"%{}s -- %10s     %8s ".format(BIG_COLUMN)
-            res.append(fmt_str%( "terms", "mentions", "activities"))
-            res.append("-"*WIDTH)
-            fmt_str =  u"%{}s -- %4d  %5.2f%% %4d  %5.2f%%".format(BIG_COLUMN)
-            for x in self.get_top_grams(pt_filter=self.options.filter
-                    , max_results=int(self.options.max)
-                    , start=self.options.start
-                    , end=self.options.end
-                    , count_bucket=None 
-                    , query=self.options.query):
-                res.append(fmt_str%(x[4], x[0], x[1]*100., x[2], x[3]*100.))
-            res.append("    TOTAL: %d activities"%self.res_cnt)
-            res.append("-"*WIDTH)
-        elif self.options.use_case.startswith("user"):
-            fmt_str = u"%{}s -- %10s     %8s ".format(BIG_COLUMN)
-            res.append(fmt_str%( "terms", "mentions", "activities"))
-            res.append("-"*WIDTH)
-            fmt_str =  u"%{}s -- %4d  %5.2f%% %4d  %5.2f%%".format(BIG_COLUMN)
-            for x in self.get_top_users(pt_filter=self.options.filter
-                    , max_results=int(self.options.max)
-                    , start=self.options.start
-                    , end=self.options.end
-                    , count_bucket=None 
-                    , query=self.options.query):
-                res.append(fmt_str%(x[4], x[0], x[1]*100., x[2], x[3]*100.))
-            res.append("    TOTAL: %d activities"%self.res_cnt)
-            res.append("-"*WIDTH)
-        elif self.options.use_case.startswith("time"):
-            res = []
-            for x in self.get_time_series(pt_filter=self.options.filter
-                    , max_results=int(self.options.max)
-                    , start=self.options.start
-                    , end=self.options.end
-                    , count_bucket="hour"
-                    , query=self.options.query):
-                res.append("{:%Y-%m-%dT%H:%M:%S},{},{}".format(x[2], x[0], x[1]))
-        elif self.options.use_case.startswith("link"):
-            list(self.get_top_links(pt_filter=self.options.filter
+        if self.options.use_case.startswith("time"):
+            self.results = Results(
+                self.user
+                , self.password
+                , self.stream_url
+                , self.options.paged
+                , self.options.output_file_path
+                , pt_filter=self.options.filter
                 , max_results=int(self.options.max)
                 , start=self.options.start
                 , end=self.options.end
-                , count_bucket=None 
-                , query=self.options.query))
-            res[-1]+=u"-"*WIDTH
-            res.append(u"%100s -- %10s     %8s (%d)"%("links", "mentions", "activities", self.res_cnt))
-            res.append("-"*2*WIDTH)
-            for x in self.freq.get_tokens(self.token_list_size):
-                res.append(u"%100s -- %4d  %5.2f%% %4d  %5.2f%%"%(x[4], x[0], x[1]*100., x[2], x[3]*100.))
-            res.append("-"*WIDTH)
+                , count_bucket="hour"
+                , show_query=self.options.query
+                )
+            res = []
+            for x in self.results.get_time_series():
+                res.append("{:%Y-%m-%dT%H:%M:%S},{},{}".format(x[2], x[0], x[1]))
+        else:
+            self.results = Results(
+                self.user
+                , self.password
+                , self.stream_url
+                , self.options.paged
+                , self.options.output_file_path
+                , pt_filter=self.options.filter
+                , max_results=int(self.options.max)
+                , start=self.options.start
+                , end=self.options.end
+                , count_bucket=None
+                , show_query=self.options.query
+                )
+            if self.options.use_case.startswith("rate"):
+                rate = self.results.query.get_rate()
+                unit = "Tweets/Minute"
+                if rate < 0.01:
+                    rate *= 60.
+                    unit = "Tweets/Hour"
+                res.append("     PowerTrack Rule: \"%s\""%self.options.filter)
+                res.append("  Oldest Tweet (UTC): %s"%str(self.results.query.oldest_t))
+                res.append("  Newest Tweet (UTC): %s"%str(self.results.query.newest_t))
+                res.append("           Now (UTC): %s"%str(datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")))
+                res.append("        %5d Tweets: %6.3f %s"%(len(self.results), rate, unit))
+                res.append("-"*WIDTH)
+            elif self.options.use_case.startswith("geo"):
+                res = []
+                for x in self.results.get_geo():
+                    if self.options.csv_flag:
+                        try:
+                            res.append("{},{},{},{}".format(x["id"], x["postedTime"], x["longitude"], x["latitude"]))
+                        except KeyError, e:
+                            print >> sys.stderr, str(e)
+                    else:
+                        res.append(json.dumps(x))
+            elif self.options.use_case.startswith("json"):
+                res = [json.dumps(x) for x in self.results.get_activities()]
+                if self.options.csv_flag:
+                    res = ["|".join(x) for x in self.results.query.get_list_set()]
+            elif self.options.use_case.startswith("word"):
+                fmt_str = u"%{}s -- %10s     %8s ".format(BIG_COLUMN)
+                res.append(fmt_str%( "terms", "mentions", "activities"))
+                res.append("-"*WIDTH)
+                fmt_str =  u"%{}s -- %4d  %5.2f%% %4d  %5.2f%%".format(BIG_COLUMN)
+                for x in self.results.get_top_grams(n=self.token_list_size):
+                    res.append(fmt_str%(x[4], x[0], x[1]*100., x[2], x[3]*100.))
+                res.append("    TOTAL: %d activities"%len(self.results))
+                res.append("-"*WIDTH)
+            elif self.options.use_case.startswith("user"):
+                fmt_str = u"%{}s -- %10s     %8s ".format(BIG_COLUMN)
+                res.append(fmt_str%( "terms", "mentions", "activities"))
+                res.append("-"*WIDTH)
+                fmt_str =  u"%{}s -- %4d  %5.2f%% %4d  %5.2f%%".format(BIG_COLUMN)
+                for x in self.results.get_top_users(n=self.token_list_size):
+                    res.append(fmt_str%(x[4], x[0], x[1]*100., x[2], x[3]*100.))
+                res.append("    TOTAL: %d activities"%len(self.results))
+                res.append("-"*WIDTH)
+            elif self.options.use_case.startswith("link"):
+                res[-1]+=u"-"*WIDTH
+                res.append(u"%100s -- %10s     %8s (%d)"%("links", "mentions", "activities", len(self.results)))
+                res.append("-"*2*WIDTH)
+                for x in self.results.get_top_links(n=self.token_list_size):
+                    res.append(u"%100s -- %4d  %5.2f%% %4d  %5.2f%%"%(x[4], x[0], x[1]*100., x[2], x[3]*100.))
+                res.append("-"*WIDTH)
         return u"\n".join(res)
 
 if __name__ == "__main__":

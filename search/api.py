@@ -26,6 +26,8 @@ POSTED_TIME_IDX = 1
 DATE_TIME_RE = re.compile("([0-9]{4}).([0-9]{2}).([0-9]{2}).([0-9]{2}):([0-9]{2})")
 
 class Query(object):
+    """This object represents a single search API query and provides utilities for
+       managing parameters, executing a query and parsing the results."""
     
     def __init__(self
             , user
@@ -34,6 +36,16 @@ class Query(object):
             , paged = False
             , output_file_path = None
             ):
+        """Creation of a Query requires a valid user name, password and endpoint url.
+           Additional parambers specifying paged search  and output file path provide
+           for making queries returning more than the 500 activity limit imposed by
+           the API. Setting paging to True will enable the token interpretation 
+           functionality provided in the API to return a seamless set of activites
+           larger than the executed query.
+
+           Once the object is created, it can be used for repeated access to the
+           configured end point with the same paging parameters for as many unique
+           queries and time periods as required."""
         self.output_file_path = output_file_path
         self.paged = paged
         self.paged_file_list = []
@@ -45,8 +57,9 @@ class Query(object):
         self.twitter_parser = TwacsCSV(",", None, False, True, False, True, False, False, False)
 
     def set_dates(self, start, end):
-        """Given string-formated dates for start and end, parse the dates and create
-        datetime objects for use in the API query. Sets class date strings."""
+        """Utility function to set dates from strings. Given string-formated dates for start 
+           and end, parse the dates and create datetime objects for use in the API query. Sets 
+           class date strings."""
         if start:
             dt = re.search(DATE_TIME_RE, start)
             if not dt:
@@ -75,7 +88,7 @@ class Query(object):
                         raise ValueError("Error. Start date greater than end date.\n")
 
     def name_munger(self, f):
-        """Creates a valid, friendly file name  fro an input rule."""
+        """Utility function to create a valid, friendly file name base string from an input rule."""
         f = re.sub(' +','_',f)
         f = f.replace(':','_')
         f = f.replace('"','_Q_')
@@ -99,10 +112,13 @@ class Query(object):
         except requests.exceptions.MissingSchema, e:
             e.msg = "Error (%s). Exiting without results."%str(e)
             raise e
-        #Don't use res.text -- creates encoding challenges!
+        #Don't use res.text as it creates encoding challenges!
         return unicode(res.content, "utf-8")
 
     def parse_responses(self):
+        """Parse returned responses, manage paging through the API token mechanism
+           when paging is set to True during object creation, and write output files
+           for paged output."""
         acs = []
         repeat = True
         page_count = 1
@@ -123,6 +139,7 @@ class Query(object):
             if self.paged:
                 if len(acs) > 0:
                     if self.output_file_path is not None:
+                        # writing to file
                         file_name = self.output_file_path + "/{0}_{1}.json".format(
                                 str(datetime.datetime.utcnow().strftime(
                                     "%Y%m%d%H%M%S"))
@@ -131,9 +148,13 @@ class Query(object):
                             for item in tmp_response["results"]:
                                 out.write(json.dumps(item)+"\n")
                         self.paged_file_list.append(file_name)
-                    else:
                         # if writing to file, don't keep track of all the data in memory
                         acs = []
+                    else:
+                        # storing in memory, so give some feedback as to size
+                        print >>sys.stderr,"[%8d bytes] %5d total activities retrieved..."%(
+                                                            sys.getsizeof(acs)
+                                                          , len(acs))
                 else:
                     print >> sys.stderr, "No results returned for rule:{0}".format(str(self.rule_payload))
                 if "next" in tmp_response:
@@ -150,7 +171,7 @@ class Query(object):
 
     def get_activity_set(self):
         """Iterates through the entire activity set from memory or disk."""
-        if self.paged:
+        if self.paged and self.output_file_path is not None:
             for file_name in self.paged_file_list:
                 with codecs.open(file_name,"rb") as f:
                     for res in f:
@@ -160,6 +181,8 @@ class Query(object):
                 yield res
 
     def get_list_set(self):
+        """Like get_activity_set, but returns a list containing values parsed by 
+           current Twacs parser configuration."""
         for rec in self.get_activity_set():
             yield self.twitter_parser.get_source_list(rec)
 
@@ -169,7 +192,10 @@ class Query(object):
             , start = None
             , end = None
             , count_bucket = None # None is json
-            , query = False):
+            , show_query = False):
+        """Execute a query with filter, results, start and end dates defined. If the count_bucket
+           variable is set to a vvalid bucket size such as mintute, day or week, then the
+           acitivity counts endpoint will be used."""
         # set class start and stop datetime variables
         self.set_dates(start, end)
         # make a friendlier file name from the rules
@@ -195,7 +221,7 @@ class Query(object):
                 raise ValueError("Error. Invalid count bucket: %s \n"%str(count_bucket))
             self.rule_payload["bucket"] = count_bucket
         # for testing, show the query JSON and stop
-        if query:
+        if show_query:
             print >>sys.stderr, "API query:"
             print >>sys.stderr, self.rule_payload
             sys.exit() 
@@ -236,19 +262,21 @@ class Query(object):
         return 
 
     def get_rate(self):
-        """Return rate from last query"""
+        """Returns rate from last query executed"""
         if self.delta_t != 0:
             return float(self.res_cnt)/self.delta_t
         else:
             return None
 
     def __len__(self):
+        """Returns the size of the results set when len(Query) is called."""
         try:
             return self.res_cnt
         except AttributeError:
             return 0
 
     def __repr__(self):
+        """Returns a string represenataion of the result set."""
         try:
             return "\n".join([json.dumps(x) for x in self.rec_dict_list])
         except AttributeError:
@@ -277,4 +305,4 @@ if __name__ == "__main__":
             , start=(now_date - datetime.timedelta(seconds=200)).strftime(TIME_FORMAT_LONG))
     for x in pg.get_activity_set():
         print x
-    g.execute("bieber", query=True)
+    g.execute("bieber", show_query=True)

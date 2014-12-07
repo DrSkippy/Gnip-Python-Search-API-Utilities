@@ -25,49 +25,55 @@ USER_NAME_INDEX = 7
 OUTPUT_PAGE_WIDTH = 120 
 BIG_COLUMN_WIDTH = 32
 
-class QueryElements(Query):
+class Results():
+    """Class for aggregating and accessing search result sets.  Returns derived values and subsets
+       as needed."""
 
     query_keys = [ "pt_filter"
-                    , "max_results"
-                    , "start"
-                    , "end"
-                    , "count_bucket"
-                    , "query" ]
+                  , "max_results"
+                  , "start"
+                  , "end"
+                  , "count_bucket"
+                  , "show_query" ]
     last_query_params = None
 
-    def get(self
+    def __init__(self
+            , user
+            , password
+            , stream_url
+            , paged = False
+            , output_file_path = None
             , pt_filter = None
             , max_results = 100
             , start = None
             , end = None
             , count_bucket = None
-            , query = False):
-        """Function the runs an API query only when parameters have changed.  This allows one
-        to make multiple calls to analytics methods on a single query."""
-        if self.last_query_params is None or not all(
-                [locals()[k] == self.last_query_params[k] for k in self.query_keys]):
-            # run the query
-            self.last_query_params = {}
-            for k in self.query_keys:
-                self.last_query_params[k] = locals()[k] 
-            self.execute(**self.last_query_params)
-            self.freq = None
-            # else nothing new to do
+            , show_query = False):
+        """Create a result set by passing all of the require parameters for a query. The Results
+           class runs an API query once when initialized. This allows one to make multiple calls 
+           to analytics methods on a single query.
 
-    def get_activities(self, **kwargs):
-        self.get(**kwargs)
-        for x in self.get_activity_set():
+           The frequency table utility returns the results for the last activity aggregation
+           performed."""
+        # run the query
+        self.last_query_params = {}
+        for k in self.query_keys:
+            self.last_query_params[k] = locals()[k] 
+        self.query = Query(user, password, stream_url, paged, output_file_path)
+        self.query.execute(**self.last_query_params)
+        self.freq = None
+
+    def get_activities(self):
+        for x in self.query.get_activity_set():
             yield x
 
-    def get_time_series(self, **kwargs):
-        self.get(**kwargs)
-        for x in self.time_series:
+    def get_time_series(self):
+        for x in self.query.time_series:
             yield x
 
-    def get_top_links(self, n=20, **kwargs):
-        self.get(**kwargs)
+    def get_top_links(self, n=20):
         self.freq = SimpleNGrams(char_upper_cutoff=100, tokenizer="space")
-        for x in self.get_list_set():
+        for x in self.query.get_list_set():
             link_str = x[LINKS_INDEX]
             if link_str != "GNIPEMPTYFIELD" and link_str != "None":
                 exec("link_list=%s"%link_str)
@@ -77,23 +83,20 @@ class QueryElements(Query):
                 self.freq.add("NoLinks")
         return self.freq.get_tokens(n)
 
-    def get_top_users(self, n=50, **kwargs):
-        self.get(**kwargs)
+    def get_top_users(self, n=50):
         self.freq = SimpleNGrams(char_upper_cutoff=20, tokenizer="twitter")
-        for x in self.get_list_set():
+        for x in self.query.get_list_set():
             self.freq.add(x[USER_NAME_INDEX])
         return self.freq.get_tokens(n) 
 
-    def get_top_grams(self, n=20, **kwargs):
-        self.get(**kwargs)
+    def get_top_grams(self, n=20):
         self.freq = SimpleNGrams(char_upper_cutoff=20, tokenizer="twitter")
-        for x in self.get_list_set():
+        for x in self.query.get_list_set():
             self.freq.add(x[TEXT_INDEX])
         return self.freq.get_tokens(n) 
             
-    def get_geo(self, **kwargs):
-        self.get(**kwargs)
-        for rec in self.get_activity_set():
+    def get_geo(self):
+        for rec in self.query.get_activity_set():
             lat, lng = None, None
             if "geo" in rec:
                 if "coordinates" in rec["geo"]:
@@ -110,22 +113,25 @@ class QueryElements(Query):
             raise VallueError("No frequency available for use case")
         return self.freq.get_tokens(size)
 
+    def __len__(self):
+        return len(self.query)
+
     def __repr__(self):
         if self.last_query_params["count_bucket"] is None:
             res = [u"-"*OUTPUT_PAGE_WIDTH]
-            rate = self.get_rate()
+            rate = self.query.get_rate()
             unit = "Tweets/Minute"
             if rate < 0.01:
                 rate *= 60.
                 unit = "Tweets/Hour"
             res.append("     PowerTrack Rule: \"%s\""%self.last_query_params["pt_filter"])
-            res.append("  Oldest Tweet (UTC): %s"%str(self.oldest_t))
-            res.append("  Newest Tweet (UTC): %s"%str(self.newest_t))
+            res.append("  Oldest Tweet (UTC): %s"%str(self.query.oldest_t))
+            res.append("  Newest Tweet (UTC): %s"%str(self.query.newest_t))
             res.append("           Now (UTC): %s"%str(datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")))
-            res.append("        %5d Tweets: %6.3f %s"%(self.res_cnt, rate, unit))
+            res.append("        %5d Tweets: %6.3f %s"%(self.query.res_cnt, rate, unit))
             res.append("-"*OUTPUT_PAGE_WIDTH)
             #
-            self.get_top_users(**self.last_query_params)
+            self.query.get_top_users()
             fmt_str = u"%{}s -- %10s     %8s (%d)".format(BIG_COLUMN_WIDTH)
             res.append(fmt_str%( "users", "tweets", "activities", self.res_cnt))
             res.append("-"*OUTPUT_PAGE_WIDTH)
@@ -134,7 +140,7 @@ class QueryElements(Query):
                 res.append(fmt_str%(x[4], x[0], x[1]*100., x[2], x[3]*100.))
             res.append("-"*OUTPUT_PAGE_WIDTH)
             #
-            self.get_top_links(**self.last_query_params)
+            self.query.get_top_links()
             fmt_str = u"%{}s -- %10s     %8s (%d)".format(int(2.5*BIG_COLUMN_WIDTH))
             res.append(fmt_str%( "links", "mentions", "activities", self.res_cnt))
             res.append("-"*OUTPUT_PAGE_WIDTH)
@@ -143,7 +149,7 @@ class QueryElements(Query):
                 res.append(fmt_str%(x[4], x[0], x[1]*100., x[2], x[3]*100.))
             res.append("-"*OUTPUT_PAGE_WIDTH)
             #
-            self.get_top_grams(**self.last_query_params)
+            self.query.get_top_grams()
             fmt_str = u"%{}s -- %10s     %8s (%d)".format(BIG_COLUMN_WIDTH)
             res.append(fmt_str%( "terms", "mentions", "activities", self.res_cnt))
             res.append("-"*OUTPUT_PAGE_WIDTH)
@@ -157,7 +163,7 @@ class QueryElements(Query):
         return u"\n".join(res)
 
 if __name__ == "__main__":
-    g = QueryElements("shendrickson@gnip.com"
+    g = Results("shendrickson@gnip.com"
             , "XXXXXPASSWORDXXXXX"
             , "https://search.gnip.com/accounts/shendrickson/search/wayback.json")
     list(g.get_time_series(pt_filter="bieber", count_bucket="hour"))

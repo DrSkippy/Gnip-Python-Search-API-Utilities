@@ -15,10 +15,10 @@ class TestQuery(unittest.TestCase):
     
     def setUp(self):
         self.g = Query("shendrickson@gnip.com"
-            , "XXXXXXXXXXXXX"
+            , "XXXXXXXXX"
             , "https://search.gnip.com/accounts/shendrickson/search/wayback.json")
         self.g_paged = Query("shendrickson@gnip.com"
-            , "XXXXXXXXXXXXX"
+            , "XXXXXXXXX"
             , "https://search.gnip.com/accounts/shendrickson/search/wayback.json"
             , paged = True
             , output_file_path = ".")
@@ -104,7 +104,7 @@ class TestQuery(unittest.TestCase):
                 , "start" : None
                 , "end" : None
                 , "count_bucket" : None # None is json
-                , "query" : False }
+                , "show_query" : False }
         self.g.execute(**tmp)
         self.assertEquals(len(self.g), 100)
         self.assertEquals(len(self.g.rec_list_list), 100)
@@ -116,7 +116,7 @@ class TestQuery(unittest.TestCase):
                 , "start" : None
                 , "end" : None
                 , "count_bucket" : None # None is json
-                , "query" : False }
+                , "show_query" : False }
         self.g.execute(**tmp)
         self.assertEquals(len(self.g), 500)
         self.assertEquals(len(self.g.time_series), 500)
@@ -143,7 +143,7 @@ class TestQuery(unittest.TestCase):
                 , "start" : tmp_start 
                 , "end" : tmp_end
                 , "count_bucket" : None # None is json
-                , "query" : False }
+                , "show_query" : False }
         self.g.execute(**tmp)
         self.assertEquals(len(self.g), 500)
         self.assertEquals(len(self.g.time_series), 500)
@@ -164,7 +164,7 @@ class TestQuery(unittest.TestCase):
                 , "start" : None
                 , "end" : None
                 , "count_bucket" : "fortnight"
-                , "query" : False }
+                , "show_query" : False }
         with self.assertRaises(ValueError) as cm:
             self.g.execute(**tmp)
         #
@@ -172,7 +172,7 @@ class TestQuery(unittest.TestCase):
                 , "start" : None
                 , "end" : None
                 , "count_bucket" : "hour"
-                , "query" : False }
+                , "show_query" : False }
         self.g.execute(**tmp)
         self.assertEquals(len(self.g), 24*30 + datetime.datetime.utcnow().hour + 1)
         self.assertGreater(self.g.delta_t, 24*30*60) # delta_t in minutes 
@@ -189,7 +189,7 @@ class TestQuery(unittest.TestCase):
         tmp = { "pt_filter": "bieber"
                 , "max_results" : 500
                 , "count_bucket" : None # None is json
-                , "query" : False }
+                , "show_query" : False }
         self.g.execute(**tmp)
         self.assertEquals(self.g.res_cnt, len(self.g))
 
@@ -198,7 +198,7 @@ class TestQuery(unittest.TestCase):
         tmp = { "pt_filter": "bieber"
                 , "max_results" : 500
                 , "count_bucket" : None # None is json
-                , "query" : False }
+                , "show_query" : False }
         self.g.execute(**tmp)
         self.assertIsNotNone(str(self.g))
         self.assertTrue('\n' in str(self.g))
