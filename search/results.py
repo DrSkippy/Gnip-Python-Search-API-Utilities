@@ -26,16 +26,8 @@ OUTPUT_PAGE_WIDTH = 120
 BIG_COLUMN_WIDTH = 32
 
 class Results():
-    """Class for aggregating and accessing search result sets.  Returns derived values and subsets
-       as needed."""
-
-    query_keys = [ "pt_filter"
-                  , "max_results"
-                  , "start"
-                  , "end"
-                  , "count_bucket"
-                  , "show_query" ]
-    last_query_params = None
+    """Class for aggregating and accessing search result sets and
+       subsets.  Returns derived values for the query specified."""
 
     def __init__(self
             , user
@@ -49,29 +41,39 @@ class Results():
             , end = None
             , count_bucket = None
             , show_query = False):
-        """Create a result set by passing all of the require parameters for a query. The Results
-           class runs an API query once when initialized. This allows one to make multiple calls 
+        """Create a result set by passing all of the require parameters 
+           for a query. The Results class runs an API query once when 
+           initialized. This allows one to make multiple calls 
            to analytics methods on a single query.
-
-           The frequency table utility returns the results for the last activity aggregation
-           performed."""
+        """
         # run the query
-        self.last_query_params = {}
-        for k in self.query_keys:
-            self.last_query_params[k] = locals()[k] 
         self.query = Query(user, password, stream_url, paged, output_file_path)
-        self.query.execute(**self.last_query_params)
+        self.query.execute(
+            pt_filter=pt_filter
+            , max_results = max_results
+            , start = start
+            , end = end
+            , count_bucket = count_bucket
+            , show_query = show_query
+            )
         self.freq = None
 
     def get_activities(self):
+        """Generator of query results."""
         for x in self.query.get_activity_set():
             yield x
 
     def get_time_series(self):
+        """Generator of time series for query results. If count_bucket
+           is set to a valid string, then the returned values are from
+           the counts endpoint. In the case of the data endpoint, the
+           generator returns the createdDate for the activities retrieved."""
         for x in self.query.time_series:
             yield x
 
     def get_top_links(self, n=20):
+        """Returns the links most shared in the data set retrieved in
+           the order of how many times each was shared."""
         self.freq = SimpleNGrams(char_upper_cutoff=100, tokenizer="space")
         for x in self.query.get_list_set():
             link_str = x[LINKS_INDEX]
@@ -84,6 +86,9 @@ class Results():
         return self.freq.get_tokens(n)
 
     def get_top_users(self, n=50):
+        """Returns the users  tweeting the most in the data set retrieved
+           in the data set. Users are returned in descending order of how
+           many times they were tweeted."""
         self.freq = SimpleNGrams(char_upper_cutoff=20, tokenizer="twitter")
         for x in self.query.get_list_set():
             self.freq.add(x[USER_NAME_INDEX])

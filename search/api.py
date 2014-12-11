@@ -26,8 +26,8 @@ POSTED_TIME_IDX = 1
 DATE_TIME_RE = re.compile("([0-9]{4}).([0-9]{2}).([0-9]{2}).([0-9]{2}):([0-9]{2})")
 
 class Query(object):
-    """This object represents a single search API query and provides utilities for
-       managing parameters, executing a query and parsing the results."""
+    """Object represents a single search API query and provides utilities for
+       managing parameters, executing the query and parsing the results."""
     
     def __init__(self
             , user
@@ -36,16 +36,19 @@ class Query(object):
             , paged = False
             , output_file_path = None
             ):
-        """Creation of a Query requires a valid user name, password and endpoint url.
-           Additional parambers specifying paged search  and output file path provide
-           for making queries returning more than the 500 activity limit imposed by
-           the API. Setting paging to True will enable the token interpretation 
-           functionality provided in the API to return a seamless set of activites
-           larger than the executed query.
+        """A Query requires at least a valid user name, password and endpoint url.
+           The URL of the endpoint should be the JSON records endpoint, not the counts
+           endpoint.
+
+           Additional parambers specifying paged search and output file path allow
+           for making queries which return more than the 500 activity limit imposed by
+           a single call to the API. This is called paging or paged search. Setting 
+           paged = True will enable the token interpretation 
+           functionality provided in the API to return a seamless set of activites.
 
            Once the object is created, it can be used for repeated access to the
-           configured end point with the same paging parameters for as many unique
-           queries and time periods as required."""
+           configured end point with the same connection configuration set at
+           creation."""
         self.output_file_path = output_file_path
         self.paged = paged
         self.paged_file_list = []
@@ -57,9 +60,12 @@ class Query(object):
         self.twitter_parser = TwacsCSV(",", None, False, True, False, True, False, False, False)
 
     def set_dates(self, start, end):
-        """Utility function to set dates from strings. Given string-formated dates for start 
-           and end, parse the dates and create datetime objects for use in the API query. Sets 
-           class date strings."""
+        """Utility function to set dates from strings. Given string-formated 
+           dates for start date time and end date time, extract the required
+           date string format for use in the API query and make sure they
+           are valid dates. 
+
+           Sets class fromDate and toDate date strings."""
         if start:
             dt = re.search(DATE_TIME_RE, start)
             if not dt:
@@ -88,7 +94,8 @@ class Query(object):
                         raise ValueError("Error. Start date greater than end date.\n")
 
     def name_munger(self, f):
-        """Utility function to create a valid, friendly file name base string from an input rule."""
+        """Utility function to create a valid, friendly file name base 
+           string from an input rule."""
         f = re.sub(' +','_',f)
         f = f.replace(':','_')
         f = f.replace('"','_Q_')
@@ -97,7 +104,8 @@ class Query(object):
         self.file_name_prefix = f[:42]
 
     def request(self):
-        """HTTP request based on class variables for rule_payload, stream_url, user and password"""
+        """HTTP request based on class variables for rule_payload, 
+           stream_url, user and password"""
         try:
             s = requests.Session()
             s.headers = {'Accept-encoding': 'gzip'}
@@ -116,9 +124,11 @@ class Query(object):
         return unicode(res.content, "utf-8")
 
     def parse_responses(self):
-        """Parse returned responses, manage paging through the API token mechanism
-           when paging is set to True during object creation, and write output files
-           for paged output."""
+        """Parse returned responses.
+
+           When paged=True, manage paging using the API token mechanism
+           
+           When output file is set, write output files for paged output."""
         acs = []
         repeat = True
         page_count = 1
@@ -170,7 +180,7 @@ class Query(object):
         return acs
 
     def get_activity_set(self):
-        """Iterates through the entire activity set from memory or disk."""
+        """Generator iterates through the entire activity set from memory or disk."""
         if self.paged and self.output_file_path is not None:
             for file_name in self.paged_file_list:
                 with codecs.open(file_name,"rb") as f:
@@ -193,9 +203,12 @@ class Query(object):
             , end = None
             , count_bucket = None # None is json
             , show_query = False):
-        """Execute a query with filter, results, start and end dates defined. If the count_bucket
-           variable is set to a vvalid bucket size such as mintute, day or week, then the
-           acitivity counts endpoint will be used."""
+        """Execute a query with filter, maximum results, start and end dates.
+
+           Count_bucket determines the bucket size for the counts endpoint.
+           If the count_bucket variable is set to a valid bucket size such 
+           as mintute, day or week, then the acitivity counts endpoint will 
+           Otherwise, the data endpoint is used."""
         # set class start and stop datetime variables
         self.set_dates(start, end)
         # make a friendlier file name from the rules
