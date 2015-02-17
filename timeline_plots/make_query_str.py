@@ -5,7 +5,7 @@ import csv
 # two args: query, name
 print "#!/usr/bin/env bash"
 vargs = sys.argv[1:]
-STR = '../search_api.py -f"{}" -s{} -e{} -n500 json | jq ".body" | term_frequency.py -w -n20 > ./examples/{}_{}_freq.csv'
+STR = '../search.py -w"./data" -f"{}" -s{} -e{} -n500 json | jq ".body" | term_frequency.py -w -n20 > ./examples/{}_{}_freq.csv'
 #ignore = False
 state = 1
 i = 0
