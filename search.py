@@ -146,6 +146,7 @@ class GnipSearchCMD():
                 , end=self.options.end
                 , count_bucket=None
                 , show_query=self.options.query
+                , search_v2=self.options.search_v2
                 )
             if self.options.use_case.startswith("rate"):
                 rate = self.results.query.get_rate()
