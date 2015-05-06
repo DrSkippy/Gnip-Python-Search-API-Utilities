@@ -29,7 +29,7 @@ if [ ! -d ./examples ]; then
 fi
 
 # Timeline Search
-../search_api.py -f"$1" -cb$BUCKET_SIZE timeline > "./examples/$2.csv" &
+../search.py -t -f"$1" -cb$BUCKET_SIZE timeline > "./examples/$2.csv" &
 wait
 
 # Signal processing

@@ -106,6 +106,9 @@ class GnipSearchCMD():
                 help="User name")
         twitter_parser.add_argument("-w", "--output-file-path", dest="output_file_path", default=None,
                 help="Create files in ./OUTPUT-FILE-PATH. This path must exists and will not be created. This options is available only with -a option. Default is no output files.")
+        twitter_parser.add_argument("-t", "--search-v2", dest="search_v2", action="store_true",
+                default=False, 
+                help="Using search API v2, which does not accept some of the standard parameters in a query")
         return twitter_parser
     
     def get_result(self):
@@ -123,8 +126,9 @@ class GnipSearchCMD():
                 , max_results=int(self.options.max)
                 , start=self.options.start
                 , end=self.options.end
-                , count_bucket="hour"
+                , count_bucket=self.options.count_bucket
                 , show_query=self.options.query
+                , search_v2=self.options.search_v2
                 )
             res = []
             for x in self.results.get_time_series():

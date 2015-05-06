@@ -35,6 +35,7 @@ class Query(object):
             , stream_url
             , paged = False
             , output_file_path = None
+            , search_v2 = False
             ):
         """A Query requires at least a valid user name, password and endpoint url.
            The URL of the endpoint should be the JSON records endpoint, not the counts
@@ -58,6 +59,7 @@ class Query(object):
         # get a parser for the twitter columns
         # TODO: use the updated retriveal methods in gnacs instead of this?
         self.twitter_parser = TwacsCSV(",", None, False, True, False, True, False, False, False)
+        self.search_v2 = search_v2
 
     def set_dates(self, start, end):
         """Utility function to set dates from strings. Given string-formated 
@@ -218,9 +220,10 @@ class Query(object):
             max_results = 500
         self.rule_payload = {
                     'query': pt_filter
-            , 'maxResults': int(max_results)
-            ,  'publisher': 'twitter'
             }
+        if not self.search_v2:
+            self.rule_payload["publisher"] = "twitter"
+            self.rule_payload["maxResults"] = int(max_results)
         if start:
             self.rule_payload["fromDate"] = self.fromDate
         if end:

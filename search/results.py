@@ -40,14 +40,16 @@ class Results():
             , start = None
             , end = None
             , count_bucket = None
-            , show_query = False):
+            , show_query = False
+            , search_v2 = False
+            ):
         """Create a result set by passing all of the require parameters 
            for a query. The Results class runs an API query once when 
            initialized. This allows one to make multiple calls 
            to analytics methods on a single query.
         """
         # run the query
-        self.query = Query(user, password, stream_url, paged, output_file_path)
+        self.query = Query(user, password, stream_url, paged, output_file_path, search_v2)
         self.query.execute(
             pt_filter=pt_filter
             , max_results = max_results
