@@ -231,6 +231,9 @@ class Query(object):
         # use teh proper endpoint url
         self.stream_url = self.end_point
         if count_bucket:
+            # remove "maxResults parameter for search v2 queries to counts endpoint
+            if self.search_v2:
+                del self.rule_payload["maxResults"]
             if not self.end_point.endswith("counts.json"): 
                 self.stream_url = self.end_point[:-5] + "/counts.json"
             if count_bucket not in ['day', 'minute', 'hour']:
