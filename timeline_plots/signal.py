@@ -82,14 +82,15 @@ top_peaks = sorted([i[1] for i in top_peaks])
 #print >> sys.stderr, top_peaks
 
 # step across peak from t-1 starting point
-for p in top_peaks:
-    i = p-1
-    while data[i] >= data[p-1]:
-        i += 1
-    wrtr.writerow([dates[p-1].strftime(FMT), 0, 0, "2_peaks"])
-    wrtr.writerow([dates[p-1].strftime(FMT), 0, data[p+1], "2_peaks"])
-    wrtr.writerow([dates[i].strftime(FMT), 0, data[p+1], "2_peaks"])
-    wrtr.writerow([dates[i].strftime(FMT), 0, 0, "2_peaks"])
+if len(top_peaks) > 2:
+    for p in top_peaks:
+        i = p-1
+        while data[i] >= data[p-1]:
+            i += 1
+        wrtr.writerow([dates[p-1].strftime(FMT), 0, 0, "2_peaks"])
+        wrtr.writerow([dates[p-1].strftime(FMT), 0, data[p+1], "2_peaks"])
+        wrtr.writerow([dates[i].strftime(FMT), 0, data[p+1], "2_peaks"])
+        wrtr.writerow([dates[i].strftime(FMT), 0, 0, "2_peaks"])
 
 ####################################################################
 # stats models trend and cycle

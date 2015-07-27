@@ -2,11 +2,11 @@ from distutils.core import setup
 
 setup(
     name='gapi',
-    version='0.7.2',
-    author='Scott Hendrickson, Josh Montague',
+    version='0.8.0',
+    author='Scott Hendrickson, Josh Montague, Jeff Kolb',
     author_email='scott@drskippy.net',
-    packages=['gnip_search'],
-    scripts=['gnip_search.py','search_api.py','search.py'],
+    packages=['search'],
+    scripts=['gnip_search.py'],
     url='https://github.com/DrSkippy27/Gnip-Python-Search-API-Utilities',
     download_url='https://github.com/DrSkippy27/Gnip-Python-Search-API-Utilities/tags/',
     license='LICENSE.txt',
