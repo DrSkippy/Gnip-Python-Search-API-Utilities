@@ -14,51 +14,54 @@ Install from PyPI with `pip install gapi`
 
 Usage:
 
-    ./search_api.py -h
-    usage: search_api.py [-h] [-a] [-c] [-b COUNT_BUCKET] [-e END] [-f FILTER]
-                         [-l STREAM_URL] [-n MAX] [-p PASSWORD] [-q] [-s START]
-                         [-u USER] [-w OUTPUT_FILE_PATH]
-                         USE_CASE
+$ ./gnip_search.py -h
+<pre>
+usage: gnip_search.py [-h] [-a] [-c] [-b COUNT_BUCKET] [-e END] [-f FILTER]
+                      [-l STREAM_URL] [-n MAX] [-p PASSWORD] [-q] [-s START]
+                      [-u USER] [-w OUTPUT_FILE_PATH] [-t]
+                      USE_CASE
 
-    GnipSearch supports the following use cases: ['json', 'wordcount', 'users',
-    'rate', 'links', 'timeline', 'geo']
+GnipSearch supports the following use cases: ['json', 'wordcount', 'users',
+'rate', 'links', 'timeline', 'geo']
 
-    positional arguments:
-      USE_CASE              Use case for this search.
+positional arguments:
+  USE_CASE              Use case for this search.
 
-    optional arguments:
-      -h, --help            show this help message and exit
-      -a, --paged           Paged access to ALL available results (Warning: this
-                            makes many requests)
-      -c, --csv             Return comma-separated 'date,counts' or geo data.
-      -b COUNT_BUCKET, --bucket COUNT_BUCKET
-                            Bucket size for counts query. Options are day, hour,
-                            minute (default is 'day').
-      -e END, --end-date END
-                            End of datetime window, format 'YYYY-mm-DDTHH:MM'
-                            (default: most recent activities)
-      -f FILTER, --filter FILTER
-                            PowerTrack filter rule (See: http://support.gnip.com/c
-                            ustomer/portal/articles/901152-powertrack-operators)
-      -l STREAM_URL, --stream-url STREAM_URL
-                            Url of search endpoint. (See your Gnip console.)
-      -n MAX, --results-max MAX
-                            Maximum results to return (default 100)
-      -p PASSWORD, --password PASSWORD
-                            Password
-      -q, --query           View API query (no data)
-      -s START, --start-date START
-                            Start of datetime window, format 'YYYY-mm-DDTHH:MM'
-                            (default: 30 days ago)
-      -u USER, --user-name USER
-                            User name
-      -w OUTPUT_FILE_PATH, --output-file-path OUTPUT_FILE_PATH
-                            Create files in ./OUTPUT-FILE-PATH. This path must
-                            exists and will not be created. This options is
-                            available only with -a option. Default is no output
-                            files.
+optional arguments:
+  -h, --help            show this help message and exit
+  -a, --paged           Paged access to ALL available results (Warning: this
+                        makes many requests)
+  -c, --csv             Return comma-separated 'date,counts' or geo data.
+  -b COUNT_BUCKET, --bucket COUNT_BUCKET
+                        Bucket size for counts query. Options are day, hour,
+                        minute (default is 'day').
+  -e END, --end-date END
+                        End of datetime window, format 'YYYY-mm-DDTHH:MM'
+                        (default: most recent activities)
+  -f FILTER, --filter FILTER
+                        PowerTrack filter rule (See: http://support.gnip.com/c
+                        ustomer/portal/articles/901152-powertrack-operators)
+  -l STREAM_URL, --stream-url STREAM_URL
+                        Url of search endpoint. (See your Gnip console.)
+  -n MAX, --results-max MAX
+                        Maximum results to return (default 100)
+  -p PASSWORD, --password PASSWORD
+                        Password
+  -q, --query           View API query (no data)
+  -s START, --start-date START
+                        Start of datetime window, format 'YYYY-mm-DDTHH:MM'
+                        (default: 30 days ago)
+  -u USER, --user-name USER
+                        User name
+  -w OUTPUT_FILE_PATH, --output-file-path OUTPUT_FILE_PATH
+                        Create files in ./OUTPUT-FILE-PATH. This path must
+                        exists and will not be created. This options is
+                        available only with -a option. Default is no output
+                        files.
+  -t, --search-v2       Using search API v2, which does not accept some of the
+                        standard parameters in a query
 
-
+</pre>
 ##Using a configuration file
 
 To avoid entering the the -u, -p and -l options for every command, create a configuration file name ".gnip" 
