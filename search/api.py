@@ -17,6 +17,9 @@ reload(sys)
 sys.stdout = codecs.getwriter('utf-8')(sys.stdout)
 sys.stdin = codecs.getreader('utf-8')(sys.stdin)
 
+#remove this
+requests.packages.urllib3.disable_warnings()
+
 # formatter of data from API 
 TIME_FORMAT_SHORT = "%Y%m%d%H%M"
 TIME_FORMAT_LONG = "%Y-%m-%dT%H:%M:%S.000Z"
@@ -145,7 +148,7 @@ class Query(object):
                     raise ValueError("Invalid request\nQuery: %s\nResponse: %s"%(self.rule_payload, doc))
             except ValueError, e:
                 e.msg = "Error. Failed to retrieve valid JSON activities:\n%s"%e
-                raise e
+                return []
             # 
             repeat = False
             if self.paged or (count_bucket and self.search_v2):

@@ -57,6 +57,10 @@ class GnipSearchCMD():
             self.password = self.options.password
         if self.options.stream_url is not None:
             self.stream_url = self.options.stream_url
+        #
+        # Search v2 uses a different url
+        if "data-api.twitter.com" in self.stream_url:
+            self.options.search_v2 = True
 
     def config_file(self):
         config = ConfigParser.ConfigParser()
@@ -106,6 +110,7 @@ class GnipSearchCMD():
                 help="User name")
         twitter_parser.add_argument("-w", "--output-file-path", dest="output_file_path", default=None,
                 help="Create files in ./OUTPUT-FILE-PATH. This path must exists and will not be created. This options is available only with -a option. Default is no output files.")
+        # depricated... leave in for compatibility
         twitter_parser.add_argument("-t", "--search-v2", dest="search_v2", action="store_true",
                 default=False, 
                 help="Using search API v2, which does not accept some of the standard parameters in a query")
