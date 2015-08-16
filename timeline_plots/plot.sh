@@ -24,18 +24,20 @@ echo "           - python numpy and scipy"
 echo "######################################################################"
 # can use minute, hour, day for bucket size
 BUCKET_SIZE=hour
+SEARCH_VERSION=""
+SEARCH_VERSION="-t"
 if [ ! -d ./examples ]; then
     mkdir ./examples
 fi
 
 # Timeline Search
-../gnip_search.py -t -f"$1" -c -b$BUCKET_SIZE timeline > "./examples/$2.csv" &
+../gnip_search.py $SEARCH_VERSION -f"$1" -c -b$BUCKET_SIZE timeline > "./examples/$2.csv" &
 wait
 
 # Signal processing
 cat "./examples/${2}.csv" | ./signal.py | grep -v "scipy" > "./examples/${2}_sig.csv"
 # build n-gram queries
-cat "./examples/${2}_sig.csv" | "./make_query_str.py" "${1}" "${2}" > "./${2}_queries.sh"
+cat "./examples/${2}_sig.csv" | "./make_query_str.py" "${1}" "${2}" "${SEARCH_VERSION}"> "./${2}_queries.sh"
 # run n-gram queries we built
 . ./${2}_queries.sh
 # Plots!
