@@ -34,10 +34,12 @@ wrtr = csv.writer(sys.stdout)
 OUTLIER_FRAC = 0.2
 FMT = "%Y-%m-%dT%H:%M:%S"
 N_PEAKS = 6
-
+# for daily input
+N_AVG = 7
+# for hourly input N_AVG = 24
 ####################################################################
 # initialize hours for averages
-hours_data = {i:[] for i in range(24)}
+hours_data = {i:[] for i in range(N_AVG)}
 # initialize data lists
 dates = []
 data = []
@@ -56,10 +58,10 @@ for x,y in zip(dates,list(data_no_trend)):
     hours_data[x.hour].append(y)
 
 # remove upper outliers for hourly averages 
-n_remove = int(OUTLIER_FRAC * len(data)/24.) 
+n_remove = int(OUTLIER_FRAC * len(data)/float(N_AVG)) 
 #print >>sys.stderr, n_remove
 
-hours_avg = {i:numpy.average(sorted(hours_data[i])[:-n_remove]) for i in range(24)}
+hours_avg = {i:numpy.average(sorted(hours_data[i])[:-n_remove]) for i in range(N_AVG)}
 #print >>sys.stderr, hours_avg
 
 # flatten daily cycle

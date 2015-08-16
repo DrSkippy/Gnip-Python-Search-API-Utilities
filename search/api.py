@@ -125,7 +125,7 @@ class Query(object):
         #Don't use res.text as it creates encoding challenges!
         return unicode(res.content, "utf-8")
 
-    def parse_responses(self):
+    def parse_responses(self, count_bucket):
         """Parse returned responses.
 
            When paged=True, manage paging using the API token mechanism
@@ -138,7 +138,7 @@ class Query(object):
         while repeat:
             doc = self.request()
             try:
-                tmp_response =  json.loads(doc)
+                tmp_response = json.loads(doc)
                 if "results" in tmp_response:
                     acs.extend(tmp_response["results"])
                 if "error" in tmp_response:
@@ -148,7 +148,7 @@ class Query(object):
                 raise e
             # 
             repeat = False
-            if self.paged:
+            if self.paged or (count_bucket and self.search_v2):
                 if len(acs) > 0:
                     if self.output_file_path is not None:
                         # writing to file
@@ -258,7 +258,7 @@ class Query(object):
         # search v2: newest date is more recent than 2006-03-01T00:00:00
         self.newest_t = datetime.datetime.strptime("2006-03-01T00:00:00.000z", TIME_FORMAT_LONG)
         #
-        for rec in self.parse_responses():
+        for rec in self.parse_responses(count_bucket):
             # parse_responses returns only the last set of activities retrieved, not all paged results.
             # to access the entire set, use the helper functions get_activity_set and get_list_set!
             self.res_cnt += 1

@@ -23,20 +23,29 @@ echo "           - python numpy and scipy"
 # echo "           - python package https://github.com/hildensia/bayesian_changepoint_detection/tree/master/"
 echo "######################################################################"
 # can use minute, hour, day for bucket size
-BUCKET_SIZE=hour
+# ***** NOTE ******
+# if you change this, you need to change N_AVG in the config section of signal.py to match
+#BUCKET_SIZE=hour
+BUCKET_SIZE=day
 SEARCH_VERSION=""
-# paged timeline search must be implmeneted before using v2
-#SEARCH_VERSION="-t"
+# need to include flags -s and -e sense empty flags not allowed
+START_DATE=""
+END_DATE=""
+SEARCH_VERSION="-t"
+# osx version of date calculation
+START_DATE="-s\"$(date -v -180d +%Y-%m-%dT00:00:00)\""
+
 if [ ! -d ./examples ]; then
     mkdir ./examples
 fi
 
 # Timeline Search
-echo "../gnip_search.py ${SEARCH_VERSION} -f${1} -c -b${BUCKET_SIZE} timeline > ./examples/${2}.csv"
-
-../gnip_search.py ${SEARCH_VERSION} -f"${1}" -c -b${BUCKET_SIZE} timeline > "./examples/${2}.csv" &
+../gnip_search.py ${SEARCH_VERSION} -f"${1}" -c -b${BUCKET_SIZE} ${START_DATE} ${END_DATE} timeline > "./examples/${2}.csv" &
 wait
-
+# search v2 reverse order
+cat ./examples/${2}.csv | sort > tmp
+mv tmp ./examples/${2}.csv 
+#
 # Signal processing
 cat "./examples/${2}.csv" | ./signal.py | grep -v "scipy" > "./examples/${2}_sig.csv"
 # build n-gram queries
