@@ -25,13 +25,16 @@ echo "######################################################################"
 # can use minute, hour, day for bucket size
 BUCKET_SIZE=hour
 SEARCH_VERSION=""
-SEARCH_VERSION="-t"
+# paged timeline search must be implmeneted before using v2
+#SEARCH_VERSION="-t"
 if [ ! -d ./examples ]; then
     mkdir ./examples
 fi
 
 # Timeline Search
-../gnip_search.py $SEARCH_VERSION -f"$1" -c -b$BUCKET_SIZE timeline > "./examples/$2.csv" &
+echo "../gnip_search.py ${SEARCH_VERSION} -f${1} -c -b${BUCKET_SIZE} timeline > ./examples/${2}.csv"
+
+../gnip_search.py ${SEARCH_VERSION} -f"${1}" -c -b${BUCKET_SIZE} timeline > "./examples/${2}.csv" &
 wait
 
 # Signal processing

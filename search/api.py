@@ -222,9 +222,8 @@ class Query(object):
                     'query': pt_filter
             }
         self.rule_payload["maxResults"] = int(max_results)
-        # SH seems to have changed to conform before launch 2015-08-15 
-        # if not self.search_v2:
-        self.rule_payload["publisher"] = "twitter"
+        if not self.search_v2:
+            self.rule_payload["publisher"] = "twitter"
         if start:
             self.rule_payload["fromDate"] = self.fromDate
         if end:
@@ -255,7 +254,9 @@ class Query(object):
         # actual oldest tweet before now
         self.oldest_t = datetime.datetime.utcnow()
         # actual newest tweet more recent that 30 days ago
-        self.newest_t = datetime.datetime.utcnow() - datetime.timedelta(days=30)
+        # self.newest_t = datetime.datetime.utcnow() - datetime.timedelta(days=30)
+        # search v2: newest date is more recent than 2006-03-01T00:00:00
+        self.newest_t = datetime.datetime.strptime("2006-03-01T00:00:00.000z", TIME_FORMAT_LONG)
         #
         for rec in self.parse_responses():
             # parse_responses returns only the last set of activities retrieved, not all paged results.
