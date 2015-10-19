@@ -33,7 +33,7 @@ START_DATE=""
 END_DATE=""
 SEARCH_VERSION="-t"
 # osx version of date calculation
-START_DATE="-s\"$(date -v -1825d +%Y-%m-%dT00:00:00)\""
+START_DATE="-s\"$(date -v -1095d +%Y-%m-%dT00:00:00)\""
 END_DATE="-e\"$(date -v -1d +%Y-%m-%dT00:00:00)\""
 
 if [ ! -d ./examples ]; then
