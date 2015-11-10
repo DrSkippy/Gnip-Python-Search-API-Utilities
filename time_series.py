@@ -3,6 +3,7 @@
 __author__="Scott Hendrickson" 
 
 import time
+import string
 import sys
 import statsmodels.api as sm
 import pandas as pd
@@ -27,7 +28,7 @@ sys.stdout = codecs.getwriter('utf-8')(sys.stdout)
 sys.stdin = codecs.getreader('utf-8')(sys.stdin)
 
 # some plot styling
-matplotlib.style.use('ggplot')
+#matplotlib.style.use('ggplot')
 
 # set up simple logging
 import logging
@@ -46,13 +47,17 @@ PEAK_OFFSET = 5
 N_MOVING = 4 
 OUTLIER_FRAC = 0.8
 START_OFFSET = 3
+PLOTS_PREFIX = "./plots"
+PLOT_DELTA_Y = 1.2
 
 class TimeSeries():
+    # this is a containter class for data (like a c struct) for 
+    # data collected from the API and associated analysis
     pass
 
 class GnipSearchTimeseries():
 
-    def __init__(self, token_list_size=20):
+    def __init__(self, token_list_size=40):
         # default tokenizer and character limit
         char_upper_cutoff = CHAR_UPPER_CUTOFF  # longer than for normal words because of user names
         self.token_list_size = int(token_list_size)
@@ -278,8 +283,12 @@ class GnipSearchTimeseries():
                         tmp.append(ts.counts[j])
                 else:
                     # past peak and going up
-                    if ts.counts[j] > tmp[-1] or ts.counts[j] < h_max:
+                    if ts.counts[j] > tmp[-1]:
                         # going back up
+                        i_finish = j - 1
+                        break
+                    elif ts.counts[j] < h_max:
+                        # dropped below half max
                         i_finish = j
                         break
                     else:
@@ -348,26 +357,79 @@ class GnipSearchTimeseries():
             logging.debug(n_grams)
         return ts
 
+    def dotplot(self, x, labels, name="dotplot.png"):
+        # Makeshift dotplots in matplotlib
+        #
+        # split into 2 data sets
+        logging.info("dotplot called with name={}".format(name))
+        n = len(labels)/2
+        x1, x2 = x[:n], x[n:]
+        labels1, labels2 = labels[:n], labels[n:]
+        ys = [r*PLOT_DELTA_Y for r in range(1,len(labels2)+1)]
+        # s
+        maxx = max(x)*1.10
+        maxy = max(ys)*1.05
+        # set up plots to be 2x taller than usual
+        f = plt.gcf()
+        size = f.get_size_inches()
+        fig, (ax1, ax2) = plt.subplots(nrows=2, ncols=1,figsize=(size[0], size[1]*n/10))
+        logging.debug("plotting top {} terms".format(n))
+        logging.debug("plot size=({},{})".format(size[0], size[1]*n/10))
+        #
+        ax1.set_xlim(0,maxx)
+        ax1.set_ylim(0,maxy)
+        ticks = ax1.yaxis.set_ticks(ys)
+        text = ax1.yaxis.set_ticklabels(labels1)
+        for ct, item in enumerate(labels1):
+            ax1.hlines(ys[ct], 0, maxx, linestyle='dashed', color='0.9')
+        ax1.plot(x1, ys, 'ko')
+        ax1.set_title("1-grams")
+        #
+        ax2.set_xlim(0,maxx)
+        ax2.set_ylim(0,maxy)
+        ticks = ax2.yaxis.set_ticks(ys)
+        text = ax2.yaxis.set_ticklabels(labels2)
+        for ct, item in enumerate(labels2):
+            ax2.hlines(ys[ct], 0, maxx, linestyle='dashed', color='0.9')
+        ax2.plot(x2, ys, 'ko')
+        ax2.set_title("2-grams")
+        ax2.set_xlabel("Fraction of Mentions")
+        #
+        plt.tight_layout()
+        plt.savefig(PLOTS_PREFIX + name)
+        plt.close("all")
+
     def plots(self, ts):
+        ######################
         # timeline
+        ######################
         df0 = pd.Series(ts.counts, index=ts.dates)
         df0.plot()
+        plt.ylabel("Counts")
         plt.tight_layout()
-        plt.savefig('./plots/time_line.pdf')
+        plt.savefig(PLOTS_PREFIX + '/time_line.png')
         plt.close("all")
+        ######################
         # cycle and trend
+        ######################
         df1 = pd.DataFrame({"cycle":ts.cycle, "trend":ts.trend}, index=ts.dates)
         df1.plot()
+        plt.ylabel("Counts")
         plt.tight_layout()
-        plt.savefig('./plots/cycle_trend_line.pdf')
+        plt.savefig(PLOTS_PREFIX + '/cycle_trend_line.png')
         plt.close("all")
+        ######################
         # moving avg
+        ######################
         df2 = pd.DataFrame({"moving":ts.moving}, index=ts.dates[:len(ts.moving)])
         df2.plot()
+        plt.ylabel("Counts")
         plt.tight_layout()
-        plt.savefig('./plots/moving_line.pdf')
+        plt.savefig(PLOTS_PREFIX + '/moving_line.png')
         plt.close("all")
+        ######################
         # timeline with peaks
+        ######################
         df3 = pd.Series(ts.counts, index=ts.dates)
         df3.plot()
         # peaks
@@ -377,18 +439,27 @@ class GnipSearchTimeseries():
             xe = a[2][9]
             y = a[2][5]
             # need to get x and y locs
-            plt.axvspan(xs, xe, ymin=0, ymax = y, linewidth=1, color='g', alpha=0.3)
+            plt.axvspan(xs, xe, ymin=0, ymax = y, linewidth=1, color='g', alpha=0.2)
             plt.axvline(xp, ymin=0, ymax = y, linewidth=1, color='y')
+        plt.ylabel("Counts")
         plt.tight_layout()
-        plt.savefig('./plots/time_peaks_line.pdf')
+        plt.savefig(PLOTS_PREFIX + '/time_peaks_line.png')
         plt.close("all")
-
-
+        ######################
+        # timeline with peaks
+        ######################
+        for n, p in enumerate(ts.topics):
+            x = []
+            labels = []
+            for i in p:
+                x.append(i[1])
+                labels.append(i[4])
+            self.dotplot(x, labels, "/peak_{}.png".format(n))
 
 if __name__ == "__main__":
+    import pickle
     g = GnipSearchTimeseries()
     ts = g.get_results()
-    import pickle
     pickle.dump(ts,open("./deleteme.pickle", "wb"))
-    ts = pickle.load(open("./deleteme.pickle", "rb"))
+    #ts = pickle.load(open("./deleteme.pickle", "rb"))
     g.plots(ts)
