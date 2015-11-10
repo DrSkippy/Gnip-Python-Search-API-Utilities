@@ -2,53 +2,53 @@
 # -*- coding: UTF-8 -*-
 __author__="Scott Hendrickson" 
 
-import time
+import ConfigParser
+import argparse
+import calendar
+import codecs
+import csv
+import datetime
+import json
+import logging
+import matplotlib
+import matplotlib.pyplot as plt
+import numpy as np
+import os
+import pandas as pd
+import statsmodels.api as sm
 import string
 import sys
-import statsmodels.api as sm
-import pandas as pd
-import matplotlib.pyplot as plt
-import os
-import numpy as np
-import matplotlib
-import json
-import datetime
-import csv
-import codecs
-import calendar
-import argparse
-import ConfigParser
-from search.results import *
-from scipy import signal
-from operator import itemgetter
+import time
 from functools import partial
+from operator import itemgetter
+from scipy import signal
+from search.results import *
 
 reload(sys)
 sys.stdout = codecs.getwriter('utf-8')(sys.stdout)
 sys.stdin = codecs.getreader('utf-8')(sys.stdin)
 
-# some plot styling
-#matplotlib.style.use('ggplot')
-
 # set up simple logging
-import logging
 logging.basicConfig(filename='time_series.log',level=logging.DEBUG)
+logging.info("#"*70)
 logging.info("################# started {} #################".format(datetime.datetime.now()))
 
-DEFAULT_CONFIG_FILENAME = "./.gnip"
+# defaults
+DEFAULT_CONFIG_FILENAME = os.path.join(".",".gnip")
 DATE_FMT = "%Y%m%d%H%M"
 DATE_FMT2 = "%Y-%m-%dT%H:%M:%S"
 CHAR_UPPER_CUTOFF = 20
-TWEET_SAMPLE = 10000
-MIN_SNR = 0.75 
-MAX_N_PEAKS = 5
-MAX_PEAK_WIDTH = 36
-PEAK_OFFSET = 5
-N_MOVING = 4 
-OUTLIER_FRAC = 0.8
-START_OFFSET = 3
-PLOTS_PREFIX = "./plots"
-PLOT_DELTA_Y = 1.2
+# tunable defaults
+TWEET_SAMPLE = 4000             # tweets to collect for peak topics
+MIN_SNR = 0.75                  # signal to noise threshold for peak detection
+MAX_N_PEAKS = 5                 # maximum number of peaks to output
+MAX_PEAK_WIDTH = 36             # max peak width in periods
+MIN_PEAK_WIDTH = 2              # min peak width in periods
+START_OFFSET = 3                # start searching peak start, max and end this many periods before peak detection algo's index
+N_MOVING = 4                    # average over buckets
+OUTLIER_FRAC = 0.8              # cut off values over 80% above or below the average
+PLOTS_PREFIX = os.path.join(".","plots")
+PLOT_DELTA_Y = 1.2              # spacing of y values in dotplot
 
 class TimeSeries():
     # this is a containter class for data (like a c struct) for 
@@ -94,7 +94,7 @@ class GnipSearchTimeseries():
         
         # Search v2 uses a different url
         if "data-api.twitter.com" not in self.stream_url:
-            logging.error("GnipSearch timeline tools require Search V2. Exiting.")
+            logging.error("gnipSearch timeline tools require Search V2. Exiting.")
             exit(-1)
 
         # Defaults
@@ -104,8 +104,8 @@ class GnipSearchTimeseries():
         self.options.query = False
         
         # log options
-        logging.debug("### options ###")
         for v in dir(self):
+            # don't log the password!
             if not v.startswith('__') and not callable(getattr(self,v)) and not v.startswith('password'):
                 logging.debug(" {} = {}".format(v, getattr(self,v)))
 
@@ -113,14 +113,17 @@ class GnipSearchTimeseries():
         config = ConfigParser.ConfigParser()
         # (1) default file name precidence
         config.read(DEFAULT_CONFIG_FILENAME)
+        logging.info("attempting to read config file {}".format(DEFAULT_CONFIG_FILENAME))
         if not config.has_section("creds"):
             # (2) environment variable file name second
             if 'GNIP_CONFIG_FILE' in os.environ:
                 config_filename = os.environ['GNIP_CONFIG_FILE']
+                logging.info("attempting to read config file {}".format(config_filename))
                 config.read(config_filename)
         if config.has_section("creds") and config.has_section("endpoint"):
             return config
         else:
+            logging.warn("no creds or endpoint section found in config file, attempting to proceed without config info from file")
             return None
 
     def args(self):
@@ -146,6 +149,9 @@ class GnipSearchTimeseries():
         twitter_parser.add_argument("-u", "--user-name", dest="user", 
                 default=None,
                 help="User name")
+        twitter_parser.add_argument("-t", "--get-topics", dest="get_topics", action="store_true", 
+                default=False,
+                help="Set flag to evaluate peak topics (this may take a few minutes)")
         twitter_parser.add_argument("-w", "--output-file-path", dest="output_file_path", 
                 default=None,
                 help="Create files in ./OUTPUT-FILE-PATH. This path must exists and will not be created. This options is available only with -a option. Default is no output files.")
@@ -155,6 +161,7 @@ class GnipSearchTimeseries():
         ######################
         # (1) Get the timeline
         ######################
+        logging.info("retrieving timeline counts")
         results_timeseries = Results( self.user
             , self.password
             , self.stream_url
@@ -189,12 +196,15 @@ class GnipSearchTimeseries():
             # crate a independent variable in interval [0.0,1.0]
             ts.x.append((calendar.timegm(datetime.datetime.strptime(i[0], DATE_FMT).timetuple()) - time_min)/time_span)
         logging.info("read {} time items from search API".format(len(ts.dates)))
+        if len(ts.dates) < 35:
+            logging.warn("peak detection with with fewer than 35 points is unreliable!")
         logging.debug('dates: ' + ','.join(map(str, ts.dates[:10])) + "...")
         logging.debug('counts: ' + ','.join(map(str, ts.counts[:10])) + "...")
         logging.debug('indep var: ' + ','.join(map(str, ts.x[:10])) + "...")
         ######################
         # (2) Detrend
         ######################
+        logging.info("detrending timeline counts")
         no_trend = signal.detrend(np.array(ts.counts))
         # determine period of data
         df = (ts.dates[1] - ts.dates[0]).total_seconds()
@@ -242,10 +252,10 @@ class GnipSearchTimeseries():
         ######################
         # (4) Peak detection
         ######################
-        peakind = signal.find_peaks_cwt(ts.counts_no_cycle_trend, np.arange(1,MAX_PEAK_WIDTH), min_snr = MIN_SNR)
+        peakind = signal.find_peaks_cwt(ts.counts_no_cycle_trend, np.arange(MIN_PEAK_WIDTH,MAX_PEAK_WIDTH), min_snr = MIN_SNR)
         n_peaks = min([MAX_N_PEAKS, len(peakind)])
-        logging.debug('peaks ({}): '.format(n_peaks) + ','.join(map(str, peakind)) + "...")
-        logging.debug('peaks ({}): '.format(n_peaks) + ','.join(map(str, [ts.dates[i] for i in peakind])) + "...")
+        logging.debug('peaks ({}): '.format(n_peaks) + ','.join(map(str, peakind)))
+        logging.debug('peaks ({}): '.format(n_peaks) + ','.join(map(str, [ts.dates[i] for i in peakind])))
         
         # top peaks determined by peak height, better way?
         # peak detector
@@ -301,12 +311,11 @@ class GnipSearchTimeseries():
             peaks.append([ i , p_volume , (i, i_start, i_max, i_finish
                                             , h_max  , p_max, p_volume
                                             , ts.dates[i_start], ts.dates[i_max], ts.dates[i_finish])])
-        logging.debug(peaks)           
         # top n_peaks by volume
         top_peaks = sorted(peaks, key = itemgetter(1))[-n_peaks:]
         # re-sort peaks by date
         ts.top_peaks = sorted(top_peaks, key = itemgetter(0))
-        logging.debug('top peaks ({}): '.format(len(ts.top_peaks)) + ','.join(map(str, ts.top_peaks)) + "...")
+        logging.debug('top peaks ({}): '.format(len(ts.top_peaks)) + ','.join(map(str, ts.top_peaks[:4])) + "...")
     
         ######################
         # (5) high/low frequency 
@@ -319,72 +328,79 @@ class GnipSearchTimeseries():
         # (6) n-grams for top peaks
         ######################
         ts.topics = []
-        for a in ts.top_peaks:
-            # start at peak
-            ds = datetime.datetime.strftime(a[2][8], DATE_FMT2)
-            # estimate how long to get TWEET_SAMPLE tweets
-            # a[1] is max tweets per period
-            est_periods = float(TWEET_SAMPLE)/a[1]
-            # df comes from above, in seconds
-            # time resolution is hours
-            est_time = max([int(est_periods * df), 60])
-            logging.debug("est_periods={}, est_time={}".format(est_periods, est_time))
-            #
-            if a[2][8] + datetime.timedelta(seconds=est_time) < a[2][9]:
-                de = datetime.datetime.strftime(a[2][8] + datetime.timedelta(seconds=est_time), DATE_FMT2)
-            elif a[2][8] < a[2][9]:
-                de = datetime.datetime.strftime(a[2][9], DATE_FMT2)
-            else:
-                de = datetime.datetime.strftime(a[2][8] + datetime.timedelta(seconds=60), DATE_FMT2)
+        if self.options.get_topics:
+            logging.info("retrieving tweets for peak topics")
+            for a in ts.top_peaks:
+                # start at peak
+                ds = datetime.datetime.strftime(a[2][8], DATE_FMT2)
+                # estimate how long to get TWEET_SAMPLE tweets
+                # a[1] is max tweets per period
+                est_periods = float(TWEET_SAMPLE)/a[1]
+                # df comes from above, in seconds
+                # time resolution is hours
+                est_time = max([int(est_periods * df), 60])
+                logging.debug("est_periods={}, est_time={}".format(est_periods, est_time))
+                #
+                if a[2][8] + datetime.timedelta(seconds=est_time) < a[2][9]:
+                    de = datetime.datetime.strftime(a[2][8] + datetime.timedelta(seconds=est_time), DATE_FMT2)
+                elif a[2][8] < a[2][9]:
+                    de = datetime.datetime.strftime(a[2][9], DATE_FMT2)
+                else:
+                    de = datetime.datetime.strftime(a[2][8] + datetime.timedelta(seconds=60), DATE_FMT2)
 
-            logging.info("retreive data for peak index={} [{},{}]".format(a[0], ds, de))
-            res = Results(
-                self.user
-                , self.password
-                , self.stream_url
-                , self.options.paged
-                , self.options.output_file_path
-                , pt_filter=self.options.filter
-                , max_results=int(self.options.max)
-                , start=ds
-                , end=de
-                , count_bucket=None
-                , show_query=self.options.query
-                , search_v2=self.options.search_v2
-                )
-            n_grams = list(res.get_top_grams(n=self.token_list_size))
-            ts.topics.append(n_grams)
-            logging.debug(n_grams)
+                logging.info("retreive data for peak index={} [{},{}]".format(a[0], ds, de))
+                res = Results(
+                    self.user
+                    , self.password
+                    , self.stream_url
+                    , self.options.paged
+                    , self.options.output_file_path
+                    , pt_filter=self.options.filter
+                    , max_results=int(self.options.max)
+                    , start=ds
+                    , end=de
+                    , count_bucket=None
+                    , show_query=self.options.query
+                    , search_v2=self.options.search_v2
+                    , hard_max = TWEET_SAMPLE
+                    )
+                logging.info("retrieved {} records".format(len(res)))
+                n_grams = list(res.get_top_grams(n=self.token_list_size))
+                ts.topics.append(n_grams)
+                logging.debug('n_grams for peak index={}: '.format(a[0]) + ','.join(map(str, [i[4] for i in n_grams][:10])) + "...")
         return ts
 
-    def dotplot(self, x, labels, name="dotplot.png"):
+    def dotplot(self, x, labels, path = "dotplot.png"):
         # Makeshift dotplots in matplotlib
         #
+        logging.info("dotplot called with path={}".format(path))
         # split into 2 data sets
-        logging.info("dotplot called with name={}".format(name))
         n = len(labels)/2
         x1, x2 = x[:n], x[n:]
         labels1, labels2 = labels[:n], labels[n:]
         ys = [r*PLOT_DELTA_Y for r in range(1,len(labels2)+1)]
-        # s
-        maxx = max(x)*1.10
+        # give ourselves a little room on the plot
+        maxx = max(x)*1.05
         maxy = max(ys)*1.05
-        # set up plots to be 2x taller than usual
-        f = plt.gcf()
-        size = f.get_size_inches()
-        fig, (ax1, ax2) = plt.subplots(nrows=2, ncols=1,figsize=(size[0], size[1]*n/10))
+        # set up plots to be a factor taller than default
+        # make factor proportional to the number of n grams plotted
+        size = plt.gcf().get_size_inches()
+        # factor of n/10 is empirical
+        scale_denom = 10
+        fig, (ax1, ax2) = plt.subplots(nrows=2, ncols=1,figsize=(size[0], size[1]*n/scale_denom))
         logging.debug("plotting top {} terms".format(n))
-        logging.debug("plot size=({},{})".format(size[0], size[1]*n/10))
-        #
+        logging.debug("plot size=({},{})".format(size[0], size[1]*n/scale_denom))
+        #  first plot
         ax1.set_xlim(0,maxx)
         ax1.set_ylim(0,maxy)
         ticks = ax1.yaxis.set_ticks(ys)
+        print labels
         text = ax1.yaxis.set_ticklabels(labels1)
         for ct, item in enumerate(labels1):
             ax1.hlines(ys[ct], 0, maxx, linestyle='dashed', color='0.9')
         ax1.plot(x1, ys, 'ko')
         ax1.set_title("1-grams")
-        #
+        # second plot
         ax2.set_xlim(0,maxx)
         ax2.set_ylim(0,maxy)
         ticks = ax2.yaxis.set_ticks(ys)
@@ -396,18 +412,24 @@ class GnipSearchTimeseries():
         ax2.set_xlabel("Fraction of Mentions")
         #
         plt.tight_layout()
-        plt.savefig(PLOTS_PREFIX + name)
+        plt.savefig(path)
         plt.close("all")
 
-    def plots(self, ts):
+    def plots(self, ts, out_type="png"):
+        valid_chars = "-_.() %s%s" % (string.ascii_letters, string.digits)
+        filter_prefix_name = ''.join(c for c in self.options.filter if c in valid_chars)
+        filter_prefix_name = filter_prefix_name.replace(" ", "_")
+        if len(filter_prefix_name) > 16:
+            filter_prefix_name = filter_prefix_name[:16]
         ######################
         # timeline
         ######################
         df0 = pd.Series(ts.counts, index=ts.dates)
         df0.plot()
         plt.ylabel("Counts")
+        plt.title(filter_prefix_name)
         plt.tight_layout()
-        plt.savefig(PLOTS_PREFIX + '/time_line.png')
+        plt.savefig(os.path.join(PLOTS_PREFIX, '{}_{}.{}'.format(filter_prefix_name, "time_line", out_type)))
         plt.close("all")
         ######################
         # cycle and trend
@@ -415,8 +437,9 @@ class GnipSearchTimeseries():
         df1 = pd.DataFrame({"cycle":ts.cycle, "trend":ts.trend}, index=ts.dates)
         df1.plot()
         plt.ylabel("Counts")
+        plt.title(filter_prefix_name)
         plt.tight_layout()
-        plt.savefig(PLOTS_PREFIX + '/cycle_trend_line.png')
+        plt.savefig(os.path.join(PLOTS_PREFIX, '{}_{}.{}'.format(filter_prefix_name, "cycle_trend_line", out_type)))
         plt.close("all")
         ######################
         # moving avg
@@ -424,8 +447,9 @@ class GnipSearchTimeseries():
         df2 = pd.DataFrame({"moving":ts.moving}, index=ts.dates[:len(ts.moving)])
         df2.plot()
         plt.ylabel("Counts")
+        plt.title(filter_prefix_name)
         plt.tight_layout()
-        plt.savefig(PLOTS_PREFIX + '/moving_line.png')
+        plt.savefig(os.path.join(PLOTS_PREFIX, '{}_{}.{}'.format(filter_prefix_name, "mov_avg_line", out_type)))
         plt.close("all")
         ######################
         # timeline with peaks
@@ -442,6 +466,7 @@ class GnipSearchTimeseries():
             plt.axvspan(xs, xe, ymin=0, ymax = y, linewidth=1, color='g', alpha=0.2)
             plt.axvline(xp, ymin=0, ymax = y, linewidth=1, color='y')
         plt.ylabel("Counts")
+        plt.title(filter_prefix_name)
         plt.tight_layout()
         plt.savefig(PLOTS_PREFIX + '/time_peaks_line.png')
         plt.close("all")
@@ -454,12 +479,12 @@ class GnipSearchTimeseries():
             for i in p:
                 x.append(i[1])
                 labels.append(i[4])
-            self.dotplot(x, labels, "/peak_{}.png".format(n))
+            self.dotplot(x, labels, os.path.join(PLOTS_PREFIX, "{}_{}_{}.{}".format(filter_prefix_name, "peak", n, out_type)))
 
 if __name__ == "__main__":
     import pickle
     g = GnipSearchTimeseries()
-    ts = g.get_results()
-    pickle.dump(ts,open("./deleteme.pickle", "wb"))
-    #ts = pickle.load(open("./deleteme.pickle", "rb"))
+    #ts = g.get_results()
+    #pickle.dump(ts,open("./deleteme.pickle", "wb"))
+    ts = pickle.load(open("./deleteme.pickle", "rb"))
     g.plots(ts)
