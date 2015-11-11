@@ -39,6 +39,7 @@ class Query(object):
             , paged = False
             , output_file_path = None
             , search_v2 = False
+            , hard_max = 500000
             ):
         """A Query requires at least a valid user name, password and endpoint url.
            The URL of the endpoint should be the JSON records endpoint, not the counts
@@ -55,6 +56,7 @@ class Query(object):
            creation."""
         self.output_file_path = output_file_path
         self.paged = paged
+        self.hard_max = hard_max
         self.paged_file_list = []
         self.user = user
         self.password = password
@@ -149,39 +151,42 @@ class Query(object):
             except ValueError, e:
                 e.msg = "Error. Failed to retrieve valid JSON activities:\n%s"%e
                 return []
-            # 
-            repeat = False
-            if self.paged or (count_bucket and self.search_v2):
-                if len(acs) > 0:
-                    if self.output_file_path is not None:
-                        # writing to file
-                        file_name = self.output_file_path + "/{0}_{1}.json".format(
-                                str(datetime.datetime.utcnow().strftime(
-                                    "%Y%m%d%H%M%S"))
-                              , str(self.file_name_prefix))
-                        with codecs.open(file_name, "wb","utf-8") as out:
-                            for item in tmp_response["results"]:
-                                out.write(json.dumps(item)+"\n")
-                        self.paged_file_list.append(file_name)
-                        # if writing to file, don't keep track of all the data in memory
-                        acs = []
+            if len(acs) < self.hard_max:
+                repeat = False
+                if self.paged or (count_bucket and self.search_v2):
+                    if len(acs) > 0:
+                        if self.output_file_path is not None:
+                            # writing to file
+                            file_name = self.output_file_path + "/{0}_{1}.json".format(
+                                    str(datetime.datetime.utcnow().strftime(
+                                        "%Y%m%d%H%M%S"))
+                                  , str(self.file_name_prefix))
+                            with codecs.open(file_name, "wb","utf-8") as out:
+                                for item in tmp_response["results"]:
+                                    out.write(json.dumps(item)+"\n")
+                            self.paged_file_list.append(file_name)
+                            # if writing to file, don't keep track of all the data in memory
+                            acs = []
+                        else:
+                            # storing in memory, so give some feedback as to size
+                            print >>sys.stderr,"[%8d bytes] %5d total activities retrieved..."%(
+                                                                sys.getsizeof(acs)
+                                                              , len(acs))
                     else:
-                        # storing in memory, so give some feedback as to size
-                        print >>sys.stderr,"[%8d bytes] %5d total activities retrieved..."%(
-                                                            sys.getsizeof(acs)
-                                                          , len(acs))
-                else:
-                    print >> sys.stderr, "No results returned for rule:{0}".format(str(self.rule_payload))
-                if "next" in tmp_response:
-                    self.rule_payload["next"]=tmp_response["next"]
-                    repeat = True
-                    page_count += 1
-                    print >> sys.stderr, "Fetching page {}...".format(page_count)
-                else:
-                    if "next" in self.rule_payload:
-                        del self.rule_payload["next"]
-                    repeat = False
-                time.sleep(PAUSE)
+                        print >> sys.stderr, "No results returned for rule:{0}".format(str(self.rule_payload))
+                    if "next" in tmp_response:
+                        self.rule_payload["next"]=tmp_response["next"]
+                        repeat = True
+                        page_count += 1
+                        print >> sys.stderr, "Fetching page {}...".format(page_count)
+                    else:
+                        if "next" in self.rule_payload:
+                            del self.rule_payload["next"]
+                        repeat = False
+                    time.sleep(PAUSE)
+            else:
+                # stop iterating after reaching hard_max
+                repeat = False
         return acs
 
     def get_activity_set(self):

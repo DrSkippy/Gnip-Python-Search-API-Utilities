@@ -1,11 +1,9 @@
 Gnip Python Search API Utilities
 ================================
 
-
 This package includes two utilities:
- - Simple Gnip Search API interactions
- - Paging back to 30 days for 1 or more filters (WARNING: this will make many API requests very quickly!)
-
+ - Gnip Search API interactions include Search V2 and paging support
+ - Timeseries analysis and plotting
 
 #### Installation
 Install from PyPI with `pip install gapi`
@@ -60,12 +58,12 @@ optional arguments:
                         files.
   -t, --search-v2       Using search API v2, which does not accept some of the
                         standard parameters in a query
-
 </pre>
+
 ##Using a configuration file
 
-To avoid entering the the -u, -p and -l options for every command, create a configuration file name ".gnip" 
-in the directory where you will run the code. If this file contains the correct parameters, you can omit
+To avoid entering the the -u, -p and -l options for every command, create a configuration file named ".gnip" 
+in the directory where you will run the code. When this file contains the correct parameters, you can omit
 this command line parameters.
 
 Use this template:
@@ -92,7 +90,8 @@ Return full, enriched, Activity Streams-format JSON payloads from the Search API
 
 *Notes* 
 
-``-a`` option (paging) collects _all_ results before printing to stdout/file and also forces ``-n 500`` in request. 
+``-a`` option (paging) collects _all_ results before printing to stdout/file and also forces ``-n 500`` per request. The paging
+option will collect up to 1/2 M tweets, which may take hours and be very costly.
 
 
 #### Wordcount 
@@ -291,3 +290,67 @@ This can also be output in delimited format:
     477161932806692865,2014-06-12T18:54:04,None,None
     477161928377516032,2014-06-12T18:54:03,-51.08593214,0.03778787
 
+
+### Simple Timeseries Analysis
+
+Usage:
+
+$ ./time_series.py -h
+
+<pre>
+usage: time_series.py [-h] [-b COUNT_BUCKET] [-e END] [-f FILTER]
+                      [-l STREAM_URL] [-p PASSWORD] [-s START] [-u USER] [-t]
+                      [-w OUTPUT_FILE_PATH]
+
+GnipSearch timeline tools
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -b COUNT_BUCKET, --bucket COUNT_BUCKET
+                        Bucket size for counts query. Options are day, hour,
+                        minute (default is 'day').
+  -e END, --end-date END
+                        End of datetime window, format 'YYYY-mm-DDTHH:MM'
+                        (default: most recent activities)
+  -f FILTER, --filter FILTER
+                        PowerTrack filter rule (See: http://support.gnip.com/c
+                        ustomer/portal/articles/901152-powertrack-operators)
+  -l STREAM_URL, --stream-url STREAM_URL
+                        Url of search endpoint. (See your Gnip console.)
+  -p PASSWORD, --password PASSWORD
+                        Password
+  -s START, --start-date START
+                        Start of datetime window, format 'YYYY-mm-DDTHH:MM'
+                        (default: 30 days ago)
+  -u USER, --user-name USER
+                        User name
+  -t, --get-topics      Set flag to evaluate peak topics (this may take a few
+                        minutes)
+  -w OUTPUT_FILE_PATH, --output-file-path OUTPUT_FILE_PATH
+                        Create files in ./OUTPUT-FILE-PATH. This path must
+                        exists and will not be created. This options is
+                        available only with -a option. Default is no output
+                        files.
+
+</pre>
+
+
+#### Dependencies
+Gnip's Search 2.0 API access is required.
+
+In addition to the the basic Gnip Search utility described immediately above, this pakage
+depends on a number of other large packges:
+
+* matplotlib
+* numpy
+* pandas
+* statsmodels
+
+#### Notes
+* You should create the path "plots" in the directory where you run the utility. This will contain the plots of
+time series and analysis
+* This utility creates an extensive log file named time_series.log. It contains many details of parameter
+settings and intermediate outputs.
+
+## License
+Gnip-Python-Search-API-Utilities by Scott Hendrickson, Josh Montague and Jeff Kolb is licensed under a Creative Commons Attribution-ShareAlike 3.0 Unported License. This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 Unported License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.
