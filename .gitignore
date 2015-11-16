@@ -3,6 +3,8 @@
 *.csv
 *.png
 *.swp
+*.pickle
+*.log
 
 # C extensions
 *.so

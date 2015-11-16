@@ -38,7 +38,7 @@ sys.stdout = codecs.getwriter('utf-8')(sys.stdout)
 sys.stdin = codecs.getreader('utf-8')(sys.stdin)
 
 # basic defaults
-FROM_PICKLE = True
+FROM_PICKLE = False
 DEFAULT_CONFIG_FILENAME = os.path.join(".",".gnip")
 DATE_FMT = "%Y%m%d%H%M"
 DATE_FMT2 = "%Y-%m-%dT%H:%M:%S"
@@ -223,7 +223,7 @@ class GnipSearchTimeseries():
         for i in res_timeseries:
             ts.dates.append(i[2])
             ts.counts.append(float(i[1]))
-            # crate a independent variable in interval [0.0,1.0]
+            # create a independent variable in interval [0.0,1.0]
             ts.x.append((calendar.timegm(datetime.datetime.strptime(i[0], DATE_FMT).timetuple()) - time_min)/time_span)
         logging.info("read {} time items from search API".format(len(ts.dates)))
         if len(ts.dates) < 35:
@@ -344,10 +344,10 @@ class GnipSearchTimeseries():
             if i_start is None:
                 # if i_start is not set, we didn't satisfy the conditions above
                 i_start = max([i - START_OFFSET, 0])
-                logging.ward("Didn't find a proper peak start point. Trying to continue.")
+                logging.warn("Didn't find a proper peak start point. Trying to continue.")
             if i_finish is None:
                 i_finish = min(i + MAX_PEAK_WIDTH, len(ts.dates)) - 1
-                logging.ward("Didn't find a proper peak end point. Trying to continue.")
+                logging.warn("Didn't find a proper peak end point. Trying to continue.")
             p_volume = sum(tmp)
             peaks.append([ i , p_volume , (i, i_start, i_max, i_finish
                                             , h_max  , p_max, p_volume

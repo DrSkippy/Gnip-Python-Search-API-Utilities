@@ -345,6 +345,7 @@ depends on a number of other large packges:
 * numpy
 * pandas
 * statsmodels
+* scipy
 
 #### Notes
 * You should create the path "plots" in the directory where you run the utility. This will contain the plots of
