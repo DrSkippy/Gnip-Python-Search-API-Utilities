@@ -282,7 +282,7 @@ class GnipSearchTimeseries():
         ######################
         # (4) Peak detection
         ######################
-        peakind = signal.find_peaks_cwt(ts.counts_no_cycle_trend, np.arange(MIN_PEAK_WIDTH,MAX_PEAK_WIDTH), min_snr = MIN_SNR)
+        peakind = signal.find_peaks_cwt(ts.counts_no_cycle_trend, np.arange(MIN_PEAK_WIDTH, MAX_PEAK_WIDTH), min_snr = MIN_SNR)
         n_peaks = min([MAX_N_PEAKS, len(peakind)])
         logging.debug('peaks ({}): '.format(n_peaks) + ','.join(map(str, peakind)))
         logging.debug('peaks ({}): '.format(n_peaks) + ','.join(map(str, [ts.dates[i] for i in peakind])))
@@ -300,10 +300,10 @@ class GnipSearchTimeseries():
         peaks = []
         for i in peakind:
             # find the first max in the possible window
-            # starting at i-1 is empiricle determination
-            tmp = [0]
+            # starting at i-1 is empirical determination
+            """tmp = [0]
             i_max = None
-            for j in range(max([i-1, 0]), min(i + MAX_PEAK_WIDTH, len(ts.dates))):
+            for j in range(max([i - 1, 0]), min(MAX_PEAK_WIDTH/2, len(ts.dates))):
                 if tmp[-1] > ts.counts[j]:
                     # record index of peak
                     i_max = j - 1 
@@ -312,13 +312,30 @@ class GnipSearchTimeseries():
                     tmp.append(ts.counts[j])
             # if i_max is not set, we dropped off the loop without a decrease in timeseries
             if i_max is None:
-                i_max = min(i + MAX_PEAK_WIDTH, len(ts.dates) - 1)
-                logging.warn("Didn't find a proper peak! Trying to continue.")
-            p_max = max(tmp)
+                i_max = min(MAX_PEAK_WIDTH/2, len(ts.dates) - 1)
+                logging.warn("Didn't find a proper peak! Trying to continue.")"""
+            i_max = i
+            p_max = ts.counts[i]
             h_max = p_max/2.
             p_sum = 0
-            tmp = []
-            i_start, i_finish = None, None
+            tmp = [ts.counts[i]]
+            i_start, i_finish = i_max, i_max
+            # start at peak, and go back and forward to find start and end
+            while True:
+                if (ts.counts[i_start - 1] <= h_max or 
+                        ts.counts[i_start - 1] >= ts.counts[i_start] or
+                        i_start - 1 <= 0):
+                    break
+                i_start -= 1
+                tmp.append(ts.counts[i_start])
+            while True:
+                if (ts.counts[i_finish + 1] <= h_max or
+                        ts.counts[i_finish + 1] >= ts.counts[i_finish] or
+                        i_finish + 1 >= len(ts.counts)):
+                    break
+                i_finish += 1
+                tmp.append(ts.counts[i_finish])
+            """
             # start far enough back to find valid raising point on front of peak
             for j in range(max([i - START_OFFSET, 0]), min(i + MAX_PEAK_WIDTH, len(ts.dates))): 
                 if j <= i_max:
@@ -347,7 +364,7 @@ class GnipSearchTimeseries():
                 logging.warn("Didn't find a proper peak start point. Trying to continue.")
             if i_finish is None:
                 i_finish = min(i + MAX_PEAK_WIDTH, len(ts.dates)) - 1
-                logging.warn("Didn't find a proper peak end point. Trying to continue.")
+                logging.warn("Didn't find a proper peak end point. Trying to continue.")"""
             p_volume = sum(tmp)
             peaks.append([ i , p_volume , (i, i_start, i_max, i_finish
                                             , h_max  , p_max, p_volume
@@ -407,7 +424,8 @@ class GnipSearchTimeseries():
                 logging.info("retrieved {} records".format(len(res)))
                 n_grams_counts = list(res.get_top_grams(n=self.token_list_size))
                 ts.topics.append(n_grams_counts)
-                logging.debug('n_grams for peak index={}: '.format(a[0]) + ','.join(map(str, [i[4] for i in n_grams][:10])) + "...")
+                logging.debug('n_grams for peak index={}: '.format(a[0]) + ','.join(
+                    map(str, [i[4].encode("utf-8","ignore") for i in n_grams_counts][:10])) + "...")
         return ts
 
     def dotplot(self, x, labels, path = "dotplot.png"):
@@ -511,7 +529,7 @@ class GnipSearchTimeseries():
         plt.ylabel("Counts")
         plt.title(filter_prefix_name)
         plt.tight_layout()
-        plt.savefig(PLOTS_PREFIX + '/time_peaks_line.png')
+        plt.savefig(os.path.join(PLOTS_PREFIX, '{}_{}.{}'.format(filter_prefix_name, "time_peaks_line", out_type)))
         plt.close("all")
         ######################
         # n-grams to help determine topics of peaks
