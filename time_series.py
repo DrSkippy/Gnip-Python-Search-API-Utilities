@@ -24,6 +24,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 import pandas as pd
+import re
 import statsmodels.api as sm
 import string
 import sys
@@ -52,9 +53,9 @@ logging.info("################# started {} #################".format(datetime.da
 # tunable defaults
 CHAR_UPPER_CUTOFF = 20          # don't include tokens longer than CHAR_UPPER_CUTOFF
 TWEET_SAMPLE = 4000             # tweets to collect for peak topics
-MIN_SNR = 0.75                  # signal to noise threshold for peak detection
-MAX_N_PEAKS = 5                 # maximum number of peaks to output
-MAX_PEAK_WIDTH = 36             # max peak width in periods
+MIN_SNR = 2.0                   # signal to noise threshold for peak detection
+MAX_N_PEAKS = 7                 # maximum number of peaks to output
+MAX_PEAK_WIDTH = 20             # max peak width in periods
 MIN_PEAK_WIDTH = 2              # min peak width in periods
 START_OFFSET = 3                # start searching peak start, max and end this many periods before peak detection algo's index
 N_MOVING = 4                    # average over buckets
@@ -132,8 +133,10 @@ class GnipSearchTimeseries():
         # log the attributes of this class including all of the options
         for v in dir(self):
             # except don't log the password!
-            if not v.startswith('__') and not callable(getattr(self,v)) and not v.startswith('password'):
-                logging.debug(" {} = {}".format(v, getattr(self,v)))
+            if not v.startswith('__') and not callable(getattr(self,v)) and not v.lower().startswith('password'):
+                tmp = str(getattr(self,v))
+                tmp = re.sub("password=.*,", "password=XXXXXXX,", tmp) 
+                logging.debug("  {}={}".format(v, tmp))
 
     def config_file(self):
         """Search for a valid config file in the standard locations."""
@@ -432,6 +435,8 @@ class GnipSearchTimeseries():
         """Makeshift dotplots in matplotlib. This is not completely general and encodes labels and
         parameter selections that are particular to n-gram dotplots."""
         logging.info("dotplot called, writing image to path={}".format(path))
+        if len(x) <= 1 or len(labels) <= 1:
+            raise ValueError("cannot make a dot plot with only 1 point")
         # split n_gram_counts into 2 data sets
         n = len(labels)/2
         x1, x2 = x[:n], x[n:]
@@ -540,7 +545,12 @@ class GnipSearchTimeseries():
             for i in p:
                 x.append(i[1])
                 labels.append(i[4])
-            self.dotplot(x, labels, os.path.join(PLOTS_PREFIX, "{}_{}_{}.{}".format(filter_prefix_name, "peak", n, out_type)))
+            try:
+                path = os.path.join(PLOTS_PREFIX, "{}_{}_{}.{}".format(filter_prefix_name, "peak", n, out_type))
+                self.dotplot(x, labels, path)
+            except ValueError, e:
+                logging.error("{} - plot path={} skipped".format(e, path))
+
 
 if __name__ == "__main__":
     """ Simple command line utility."""

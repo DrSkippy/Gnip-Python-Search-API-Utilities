@@ -334,6 +334,13 @@ optional arguments:
 
 </pre>
 
+#### Example Plots
+
+![Image of Earthquake Timeline](/img/earthquake_time_line.png)
+
+![Image of Earthquake Trend and Variation](/img/earthquake_cycle_trend_line.png)
+
+![Image of Earthquake Peaks ](/img/earthquake_time_peaks_line.png)
 
 #### Dependencies
 Gnip's Search 2.0 API access is required.
