@@ -12,7 +12,7 @@ Install from PyPI with `pip install gapi`
 
 Usage:
 
-$ ./gnip_search.py -h
+$ gnip_search.py -h
 <pre>
 usage: gnip_search.py [-h] [-a] [-c] [-b COUNT_BUCKET] [-e END] [-f FILTER]
                       [-l STREAM_URL] [-n MAX] [-p PASSWORD] [-q] [-s START]
@@ -295,10 +295,10 @@ This can also be output in delimited format:
 
 Usage:
 
-$ ./time_series.py -h
+$ gnip_time_series.py -h
 
 <pre>
-usage: time_series.py [-h] [-b COUNT_BUCKET] [-e END] [-f FILTER]
+usage: gnip_time_series.py [-h] [-b COUNT_BUCKET] [-e END] [-f FILTER]
                       [-l STREAM_URL] [-p PASSWORD] [-s START] [-u USER] [-t]
                       [-w OUTPUT_FILE_PATH]
 
@@ -335,6 +335,10 @@ optional arguments:
 </pre>
 
 #### Example Plots
+
+Example output from command:
+    
+    gnip_time_series.py -f "earthquake" -s2015-10-01T00:00:00 -e2015-11-18T00:00:00 -t -bhour
 
 ![Image of Earthquake Timeline](/img/earthquake_time_line.png)
 
