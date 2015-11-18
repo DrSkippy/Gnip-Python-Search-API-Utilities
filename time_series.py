@@ -56,26 +56,25 @@ TWEET_SAMPLE = 4000             # tweets to collect for peak topics
 MIN_SNR = 2.0                   # signal to noise threshold for peak detection
 MAX_N_PEAKS = 7                 # maximum number of peaks to output
 MAX_PEAK_WIDTH = 20             # max peak width in periods
-MIN_PEAK_WIDTH = 2              # min peak width in periods
-START_OFFSET = 3                # start searching peak start, max and end this many periods before peak detection algo's index
+MIN_PEAK_WIDTH = 1              # min peak width in periods
+SEARCH_PEAK_WIDTH = 3           # min peak width in periods
 N_MOVING = 4                    # average over buckets
 OUTLIER_FRAC = 0.8              # cut off values over 80% above or below the average
 PLOTS_PREFIX = os.path.join(".","plots")
 PLOT_DELTA_Y = 1.2              # spacing of y values in dotplot
 
-logging.debug("CHAR_UPPER_CUTOFF={},TWEET_SAMPLE={},MIN_SNR={},MAX_N_PEAKS={},MAX_PEAK_WIDTH={},MIN_PEAK_WIDTH={},START_OFFSET={},N_MOVING={},OUTLIER_FRAC={},PLOTS_PREFIX={},PLOT_DELTA_Y={}".format(
+logging.debug("CHAR_UPPER_CUTOFF={},TWEET_SAMPLE={},MIN_SNR={},MAX_N_PEAKS={},MAX_PEAK_WIDTH={},MIN_PEAK_WIDTH={},SEARCH_PEAK_WIDTH={},N_MOVING={},OUTLIER_FRAC={},PLOTS_PREFIX={},PLOT_DELTA_Y={}".format(
     CHAR_UPPER_CUTOFF 
     , TWEET_SAMPLE 
     , MIN_SNR 
     , MAX_N_PEAKS 
     , MAX_PEAK_WIDTH 
     , MIN_PEAK_WIDTH 
-    , START_OFFSET 
+    , SEARCH_PEAK_WIDTH
     , N_MOVING 
     , OUTLIER_FRAC 
     , PLOTS_PREFIX 
     , PLOT_DELTA_Y ))
-
 
 class TimeSeries():
     """Containter class for data collected from the API and associated analysis outputs"""
@@ -169,6 +168,9 @@ class GnipSearchTimeseries():
         twitter_parser.add_argument("-f", "--filter", dest="filter", 
                 default="from:jrmontag OR from:gnip",
                 help="PowerTrack filter rule (See: http://support.gnip.com/customer/portal/articles/901152-powertrack-operators)")
+        twitter_parser.add_argument("-g", "--second_filter", dest="second_filter", 
+                default=None,
+                help="Use a second filter to show correlation plots of -f timeline vs -g timeline.")
         twitter_parser.add_argument("-l", "--stream-url", dest="stream_url", 
                 default=None,
                 help="Url of search endpoint. (See your Gnip console.)")
@@ -235,6 +237,35 @@ class GnipSearchTimeseries():
         logging.debug('counts: ' + ','.join(map(str, ts.counts[:10])) + "...")
         logging.debug('indep var: ' + ','.join(map(str, ts.x[:10])) + "...")
         ######################
+        # (1.1) Get a second timeline?
+        ######################
+        if self.options.second_filter is not None:
+            logging.info("retrieving second timeline counts")
+            results_timeseries = Results( self.user
+                , self.password
+                , self.stream_url
+                , self.options.paged
+                , self.options.output_file_path
+                , pt_filter=self.options.second_filter
+                , max_results=int(self.options.max)
+                , start=self.options.start
+                , end=self.options.end
+                , count_bucket=self.options.count_bucket
+                , show_query=self.options.query
+                , search_v2=self.options.search_v2
+                )
+            # sort by date
+            second_res_timeseries = sorted(results_timeseries.get_time_series(), key = itemgetter(0))
+            if len(second_res_timeseries) != len(res_timeseries):
+                logging.error("time series of different sizes not allowed")
+            else:
+                ts.second_counts = []
+                # load and format data
+                for i in second_res_timeseries:
+                    ts.second_counts.append(float(i[1]))
+                logging.info("read {} time items from search API".format(len(ts.second_counts)))
+                logging.debug('second counts: ' + ','.join(map(str, ts.second_counts[:10])) + "...")
+        ######################
         # (2) Detrend and remove prominent period
         ######################
         logging.info("detrending timeline counts")
@@ -286,13 +317,13 @@ class GnipSearchTimeseries():
         # (4) Peak detection
         ######################
         peakind = signal.find_peaks_cwt(ts.counts_no_cycle_trend, np.arange(MIN_PEAK_WIDTH, MAX_PEAK_WIDTH), min_snr = MIN_SNR)
-        n_peaks = min([MAX_N_PEAKS, len(peakind)])
+        n_peaks = min(MAX_N_PEAKS, len(peakind))
         logging.debug('peaks ({}): '.format(n_peaks) + ','.join(map(str, peakind)))
         logging.debug('peaks ({}): '.format(n_peaks) + ','.join(map(str, [ts.dates[i] for i in peakind])))
         
         # top peaks determined by peak volume, better way?
         # peak detector algorithm:
-        #      * is leading by a few periods or up to 1 period late
+        #      * middle of peak (of unknown width)
         #      * finds peaks up to MAX_PEAK_WIDTH wide
         #
         #   algorithm for geting peak start, peak and end parameters:
@@ -303,25 +334,12 @@ class GnipSearchTimeseries():
         peaks = []
         for i in peakind:
             # find the first max in the possible window
-            # starting at i-1 is empirical determination
-            """tmp = [0]
-            i_max = None
-            for j in range(max([i - 1, 0]), min(MAX_PEAK_WIDTH/2, len(ts.dates))):
-                if tmp[-1] > ts.counts[j]:
-                    # record index of peak
-                    i_max = j - 1 
-                    break
-                else:
-                    tmp.append(ts.counts[j])
-            # if i_max is not set, we dropped off the loop without a decrease in timeseries
-            if i_max is None:
-                i_max = min(MAX_PEAK_WIDTH/2, len(ts.dates) - 1)
-                logging.warn("Didn't find a proper peak! Trying to continue.")"""
-            i_max = i
-            p_max = ts.counts[i]
+            i_start = max(0, i - SEARCH_PEAK_WIDTH)
+            i_finish = min(len(ts.counts) - 1, i + SEARCH_PEAK_WIDTH)
+            p_max = max(ts.counts[i_start:i_finish])
             h_max = p_max/2.
-            p_sum = 0
-            tmp = [ts.counts[i]]
+            # i_max not center
+            i_max = i_start + ts.counts[i_start:i_finish].index(p_max)
             i_start, i_finish = i_max, i_max
             # start at peak, and go back and forward to find start and end
             while True:
@@ -330,45 +348,20 @@ class GnipSearchTimeseries():
                         i_start - 1 <= 0):
                     break
                 i_start -= 1
-                tmp.append(ts.counts[i_start])
             while True:
                 if (ts.counts[i_finish + 1] <= h_max or
                         ts.counts[i_finish + 1] >= ts.counts[i_finish] or
                         i_finish + 1 >= len(ts.counts)):
                     break
                 i_finish += 1
-                tmp.append(ts.counts[i_finish])
-            """
-            # start far enough back to find valid raising point on front of peak
-            for j in range(max([i - START_OFFSET, 0]), min(i + MAX_PEAK_WIDTH, len(ts.dates))): 
-                if j <= i_max:
-                    # before or on peak
-                    if ts.counts[j] > h_max:
-                        if i_start is None:
-                            i_start = j - 1
-                        # keep track of counts for volume
-                        tmp.append(ts.counts[j])
-                else:
-                    # past peak and going up
-                    if ts.counts[j] > tmp[-1]:
-                        # timeseries is increasing, use the last point to get the minimum
-                        i_finish = j - 1
-                        break
-                    elif ts.counts[j] < h_max:
-                        # dropped below half max
-                        i_finish = j
-                        break
-                    else:
-                        # keep track of counts for volume
-                        tmp.append(ts.counts[j])
-            if i_start is None:
-                # if i_start is not set, we didn't satisfy the conditions above
-                i_start = max([i - START_OFFSET, 0])
-                logging.warn("Didn't find a proper peak start point. Trying to continue.")
-            if i_finish is None:
-                i_finish = min(i + MAX_PEAK_WIDTH, len(ts.dates)) - 1
-                logging.warn("Didn't find a proper peak end point. Trying to continue.")"""
-            p_volume = sum(tmp)
+            # i is center of peak so balance window
+            delta_i = max(1, i - i_start)
+            if i_finish - i > delta_i:
+                delta_i = i_finish - i
+            # final est of start and finish
+            i_finish = min(len(ts.counts) - 1, i + delta_i)
+            i_start = max(0, i - delta_i)
+            p_volume = sum(ts.counts[i_start:i_finish])
             peaks.append([ i , p_volume , (i, i_start, i_max, i_finish
                                             , h_max  , p_max, p_volume
                                             , ts.dates[i_start], ts.dates[i_max], ts.dates[i_finish])])
@@ -399,7 +392,7 @@ class GnipSearchTimeseries():
                 est_periods = float(TWEET_SAMPLE)/a[1]
                 # df comes from above, in seconds
                 # time resolution is hours
-                est_time = max([int(est_periods * df), 60])
+                est_time = max(int(est_periods * df), 60)
                 logging.debug("est_periods={}, est_time={}".format(est_periods, est_time))
                 #
                 if a[2][8] + datetime.timedelta(seconds=est_time) < a[2][9]:
@@ -487,6 +480,11 @@ class GnipSearchTimeseries():
         filter_prefix_name = filter_prefix_name.replace(" ", "_")
         if len(filter_prefix_name) > 16:
             filter_prefix_name = filter_prefix_name[:16]
+        if self.options.second_filter is not None:
+            second_filter_prefix_name = ''.join(c for c in self.options.second_filter if c in valid_chars)
+            second_filter_prefix_name = second_filter_prefix_name.replace(" ", "_")
+            if len(second_filter_prefix_name) > 16:
+                second_filter_prefix_name = second_filter_prefix_name[:16]
         ######################
         # timeline
         ######################
@@ -546,11 +544,29 @@ class GnipSearchTimeseries():
                 x.append(i[1])
                 labels.append(i[4])
             try:
+                logging.info("creating n-grams dotplot for peak {}".format(n))
                 path = os.path.join(PLOTS_PREFIX, "{}_{}_{}.{}".format(filter_prefix_name, "peak", n, out_type))
                 self.dotplot(x, labels, path)
             except ValueError, e:
                 logging.error("{} - plot path={} skipped".format(e, path))
-
+        ######################
+        # x vs y scatter plot for correlations 
+        ######################
+        if self.options.second_filter is not None:
+            logging.info("creating scatter for queries {} and {}".format(self.options.filter, self.options.second_filter))
+            df4 = pd.DataFrame({filter_prefix_name: ts.counts, second_filter_prefix_name:ts.second_counts})
+            df4.plot(kind='scatter', x=filter_prefix_name, y=second_filter_prefix_name)
+            plt.ylabel(second_filter_prefix_name)
+            plt.xlabel(filter_prefix_name)
+            plt.xlim([0, 1.05 * max(ts.counts)])
+            plt.ylim([0, 1.05 * max(ts.second_counts)])
+            plt.title("{} vs. {}".format(second_filter_prefix_name, filter_prefix_name))
+            plt.tight_layout()
+            plt.savefig(os.path.join(PLOTS_PREFIX, '{}_v_{}_{}.{}'.format(filter_prefix_name, 
+                                second_filter_prefix_name, 
+                                "scatter", 
+                                out_type)))
+            plt.close("all")
 
 if __name__ == "__main__":
     """ Simple command line utility."""
