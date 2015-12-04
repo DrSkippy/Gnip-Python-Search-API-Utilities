@@ -335,9 +335,6 @@ optional arguments:
   -w OUTPUT_FILE_PATH, --output-file-path OUTPUT_FILE_PATH
                         Create files in ./OUTPUT-FILE-PATH. This path must
                         exists and will not be created. 
-
-Note: -w option is broken at the moment
-
 </pre>
 
 #### Example Plots

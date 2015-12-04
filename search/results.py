@@ -67,11 +67,8 @@ class Results():
             yield x
 
     def get_time_series(self):
-        """Generator of time series for query results. If count_bucket
-           is set to a valid string, then the returned values are from
-           the counts endpoint. In the case of the data endpoint, the
-           generator returns the createdDate for the activities retrieved."""
-        for x in self.query.time_series:
+        """Generator of time series for query results."""
+        for x in self.query.get_time_series():
             yield x
 
     def get_top_links(self, n=20):
@@ -171,7 +168,7 @@ class Results():
             res.append("-"*OUTPUT_PAGE_WIDTH)
         else:
             res = ["{:%Y-%m-%dT%H:%M:%S},{}".format(x[2], x[1])
-                        for x in self.time_series]
+                        for x in self.get_time_series()]
         return u"\n".join(res)
 
 if __name__ == "__main__":

@@ -189,6 +189,23 @@ class Query(object):
                 repeat = False
         return acs
 
+    def get_time_series(self):
+        if self.paged and self.output_file_path is not None:
+            for file_name in self.paged_file_list:
+                with codecs.open(file_name,"rb") as f:
+                    for res in f:
+                        rec = json.loads(res.strip())
+                        t = datetime.datetime.strptime(rec["timePeriod"], TIME_FORMAT_SHORT)
+                        yield [rec["timePeriod"], rec["count"], t]
+        else:
+            if self.bucket:
+                for i in self.time_series:
+                    yield i
+            else:
+                # todo: list of tweets, aggregate by bucket
+                raise NotImplementedError("Aggregated buckets on json tweets not implemented!")
+
+
     def get_activity_set(self):
         """Generator iterates through the entire activity set from memory or disk."""
         if self.paged and self.output_file_path is not None:
@@ -272,15 +289,17 @@ class Query(object):
             self.res_cnt += 1
             self.rec_dict_list.append(rec)
             if count_bucket:
-                # timeline
+                # timeline data
                 t = datetime.datetime.strptime(rec["timePeriod"], TIME_FORMAT_SHORT)
                 tmp_tl_list = [rec["timePeriod"], rec["count"], t]
             else:
                 # json activities
+                # keep track of tweet times for time calculation
                 tmp_list = self.twitter_parser.procRecordToList(rec)
                 self.rec_list_list.append(tmp_list)
                 t = datetime.datetime.strptime(tmp_list[POSTED_TIME_IDX], TIME_FORMAT_LONG)
                 tmp_tl_list = [tmp_list[POSTED_TIME_IDX], 1, t]
+            # this list is ***either*** list of buckets or list of tweet times!
             self.time_series.append(tmp_tl_list)
             # timeline reqeusts don't return activities!
             if t < self.oldest_t:
