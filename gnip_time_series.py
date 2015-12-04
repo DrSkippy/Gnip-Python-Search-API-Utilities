@@ -342,13 +342,13 @@ class GnipSearchTimeseries():
             i_max = i_start + ts.counts[i_start:i_finish].index(p_max)
             i_start, i_finish = i_max, i_max
             # start at peak, and go back and forward to find start and end
-            while True:
+            while i_start >= 1:
                 if (ts.counts[i_start - 1] <= h_max or 
                         ts.counts[i_start - 1] >= ts.counts[i_start] or
                         i_start - 1 <= 0):
                     break
                 i_start -= 1
-            while True:
+            while i_finish < len(ts.counts) - 1:
                 if (ts.counts[i_finish + 1] <= h_max or
                         ts.counts[i_finish + 1] >= ts.counts[i_finish] or
                         i_finish + 1 >= len(ts.counts)):
@@ -388,8 +388,12 @@ class GnipSearchTimeseries():
                 # start at peak
                 ds = datetime.datetime.strftime(a[2][8], DATE_FMT2)
                 # estimate how long to get TWEET_SAMPLE tweets
-                # a[1] is max tweets per period
-                est_periods = float(TWEET_SAMPLE)/a[1]
+                # a[1][5] is max tweets per period
+                if a[2][5] > 0:
+                    est_periods = float(TWEET_SAMPLE)/a[2][5]
+                else:
+                    logging.warn("peak with zero max tweets ({}), setting est_periods to 1".format(a))
+                    est_periods = 1
                 # df comes from above, in seconds
                 # time resolution is hours
                 est_time = max(int(est_periods * df), 60)

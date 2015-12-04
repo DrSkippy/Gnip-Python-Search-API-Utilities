@@ -7,6 +7,7 @@ This package includes two utilities:
 
 #### Installation
 Install from PyPI with `pip install gapi`
+Or to use the full time line capability, `pip install gapi[timeline]`
 
 ## Search API
 
