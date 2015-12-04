@@ -82,9 +82,11 @@ Use this template:
 
 #### JSON
 
-Return full, enriched, Activity Streams-format JSON payloads from the Search API endpoint.
+Return full, enriched, Activity Streams-format JSON payloads from the Search API endpoint. Run Gnip-Python-Search-API-Utilities/gnip_search.py from Gnip-Python-Search-API-Utilities:
 
-    $ ./search_api.py -uXXX -pXXX -f"from:Gnip" json
+Note: If you have a GNIP_CONFIG_FILE defined (try echo $GNIP_CONFIG_FILE, it should return the path to the config that you created), -u and -p arguements are not necessary
+
+    $ ./gnip_search.py -uXXX -pXXX -f"from:Gnip" json
     {"body": "RT @bbi: The #BigBoulder bloggers have been busy. Head to http://t.co/Rwve0dVA82 for recaps of the Sina Weibo, Tumblr &amp; Academic Research s\u2026", "retweetCount": 3, "generator": {"link": "http://twitter.com", "displayName": "Twitter Web Client"}, "twitter_filter_level": "medium", "gnip": {"klout_profile": {"link": "http://klout.com/user/id/651348", "topics": [{"link": "http://klout.com/topic/id/5144818194631006088", "displayName": "Software", "
     ...
 
@@ -98,7 +100,7 @@ option will collect up to 1/2 M tweets, which may take hours and be very costly.
 
 Return top 1- and 2-grams - with counts and document frequency - from matching activities. Can modify the settings within simple ngrams package (``sngrams``) to modify the range of output.
 
-    $ ./search_api.py -uXXX -pXXX -f"world cup" -n200 wordcount
+    $ ./gnip_search.py -uXXX -pXXX -f"world cup" -n200 wordcount
     ------------------------------------------------------------
                      terms --   mentions     activities (200)
     ------------------------------------------------------------
@@ -150,7 +152,7 @@ Return top 1- and 2-grams - with counts and document frequency - from matching a
 
 Return the most common usernames occuring in matching activities
 
-    $ ./search_api.py -uXXX -pXXX -f"obama" -n500 users
+    $ ./gnip_search.py -uXXX -pXXX -f"obama" -n500 users
     ------------------------------------------------------------
                      terms --   mentions     activities (500)
     ------------------------------------------------------------
@@ -182,7 +184,7 @@ Return the most common usernames occuring in matching activities
 
 Calculate the approximate activity rate from matched activities.
 
-    $ ./search_api.py -uXXX -pXXX -f"from:jrmontag" -n500 rate
+    $ ./gnip_search.py -uXXX -pXXX -f"from:jrmontag" -n500 rate
     ------------------------------------------------------------
        PowerTrack Rule: "from:jrmontag"
     Oldest Tweet (UTC): 2014-05-13 02:14:44
@@ -197,7 +199,7 @@ Calculate the approximate activity rate from matched activities.
 
 Return the most frequently observed links - count and document frequency - in matching activities
 
-    $ ./search_api.py -uXXX -pXXX -f"from:drskippy" -n500 links
+    $ ./gnip_search.py -uXXX -pXXX -f"from:drskippy" -n500 links
     ---------------------------------------------------------------------------------------------------------------------------------
                                                                                                    links --   mentions     activities (31)
     ---------------------------------------------------------------------------------------------------------------------------------
@@ -229,12 +231,12 @@ Return the most frequently observed links - count and document frequency - in ma
 
 Return a count timeline of matching activities. Without further options, results are returned in JSON format...
 
-    $ ./search_api.py -uXXX -pXXX -f"@cia"  timeline
+    $ ./gnip_search.py -uXXX -pXXX -f"@cia"  timeline
     {"results": [{"count": 32, "timePeriod": "201405130000"}, {"count": 31, "timePeriod": "201405140000"}, 
 
 Results can be returned in comma-delimited format with the ``-c`` option:
 
-    $ ./search_api.py -uXXX -pXXX -f"@cia"  timeline -c
+    $ ./gnip_search.py -uXXX -pXXX -f"@cia"  timeline -c
     2014-05-13T00:00:00,32
     2014-05-14T00:00:00,31
     2014-05-15T00:00:00,23
@@ -244,7 +246,7 @@ Results can be returned in comma-delimited format with the ``-c`` option:
 
 And bucket size can be adjusted with ``-b``:
 
-    $ ./search_api.py -uXXX -pXXX -f"@cia"  timeline -c -b hour
+    $ ./gnip_search.py -uXXX -pXXX -f"@cia"  timeline -c -b hour
     ...
     2014-06-06T11:00:00,0
     2014-06-06T12:00:00,0
@@ -270,7 +272,7 @@ And bucket size can be adjusted with ``-b``:
     
 Return JSON payloads with the latitude, longitude, timestamp, and activity id for matching activities 
 
-    $ ./search_api.py -uXXX -pXXX -f"vamos has:geo" geo 
+    $ ./gnip_search.py -uXXX -pXXX -f"vamos has:geo" geo 
     {"latitude": 4.6662819, "postedTime": "2014-06-12T18:52:48", "id": "477161613775351808", "longitude": -74.0557122}
     {"latitude": null, "postedTime": "2014-06-12T18:52:48", "id": "477161614354165760", "longitude": null}
     {"latitude": -24.4162955, "postedTime": "2014-06-12T18:52:47", "id": "477161609786568704", "longitude": -53.5296426}
@@ -281,7 +283,7 @@ Return JSON payloads with the latitude, longitude, timestamp, and activity id fo
 
 This can also be output in delimited format:
 
-    $ ./search_api.py -uXXX -pXXX -f"vamos has:geo" geo -c 
+    $ ./gnip_search.py -uXXX -pXXX -f"vamos has:geo" geo -c 
     477161971364933632,2014-06-12T18:54:13,-6.350394,38.926667
     477161943015636992,2014-06-12T18:54:07,-46.60175585,-23.63230955
     477161939647623168,2014-06-12T18:54:06,-49.0363085,-26.6042339
@@ -299,8 +301,8 @@ $ gnip_time_series.py -h
 
 <pre>
 usage: gnip_time_series.py [-h] [-b COUNT_BUCKET] [-e END] [-f FILTER]
-                      [-l STREAM_URL] [-p PASSWORD] [-s START] [-u USER] [-t]
-                      [-w OUTPUT_FILE_PATH]
+                           [-g SECOND_FILTER] [-l STREAM_URL] [-p PASSWORD]
+                           [-s START] [-u USER] [-t] [-w OUTPUT_FILE_PATH]
 
 GnipSearch timeline tools
 
@@ -315,6 +317,9 @@ optional arguments:
   -f FILTER, --filter FILTER
                         PowerTrack filter rule (See: http://support.gnip.com/c
                         ustomer/portal/articles/901152-powertrack-operators)
+  -g SECOND_FILTER, --second_filter SECOND_FILTER
+                        Use a second filter to show correlation plots of -f
+                        timeline vs -g timeline.
   -l STREAM_URL, --stream-url STREAM_URL
                         Url of search endpoint. (See your Gnip console.)
   -p PASSWORD, --password PASSWORD
@@ -328,13 +333,14 @@ optional arguments:
                         minutes)
   -w OUTPUT_FILE_PATH, --output-file-path OUTPUT_FILE_PATH
                         Create files in ./OUTPUT-FILE-PATH. This path must
-                        exists and will not be created. This options is
-                        available only with -a option. Default is no output
-                        files.
+                        exists and will not be created. 
+
+Note: -w option is broken at the moment
 
 </pre>
 
 #### Example Plots
+
 
 Example output from command:
     
@@ -363,6 +369,11 @@ depends on a number of other large packges:
 time series and analysis
 * This utility creates an extensive log file named time_series.log. It contains many details of parameter
 settings and intermediate outputs.
+* On a remote machine or server, change your matplotlib backend by creating a local matplotlibrc file. Create Gnip-Python-Search-API-Utilities/matplotlibrc:
+
+  # Change the backend to Agg to avoid errors when matplotlib cannot display the plots
+  # More information on creating and editing a matplotlibrc file at: http://matplotlib.org/users/customizing.html
+  backend      : Agg
 
 ## License
 Gnip-Python-Search-API-Utilities by Scott Hendrickson, Josh Montague and Jeff Kolb is licensed under a Creative Commons Attribution-ShareAlike 3.0 Unported License. This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 Unported License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.
