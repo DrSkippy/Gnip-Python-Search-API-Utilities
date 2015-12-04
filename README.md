@@ -372,9 +372,11 @@ time series and analysis
 settings and intermediate outputs.
 * On a remote machine or server, change your matplotlib backend by creating a local matplotlibrc file. Create Gnip-Python-Search-API-Utilities/matplotlibrc:
 
+<pre>
   # Change the backend to Agg to avoid errors when matplotlib cannot display the plots
   # More information on creating and editing a matplotlibrc file at: http://matplotlib.org/users/customizing.html
   backend      : Agg
+</pre>
 
 ## License
 Gnip-Python-Search-API-Utilities by Scott Hendrickson, Josh Montague and Jeff Kolb is licensed under a Creative Commons Attribution-ShareAlike 3.0 Unported License. This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 Unported License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.
