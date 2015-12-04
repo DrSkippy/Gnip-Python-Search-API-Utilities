@@ -85,7 +85,7 @@ Use this template:
 
 Return full, enriched, Activity Streams-format JSON payloads from the Search API endpoint. Run Gnip-Python-Search-API-Utilities/gnip_search.py from Gnip-Python-Search-API-Utilities:
 
-Note: If you have a GNIP_CONFIG_FILE defined (try echo $GNIP_CONFIG_FILE, it should return the path to the config that you created), -u and -p arguements are not necessary
+Note: If you have a GNIP_CONFIG_FILE defined (try echo $GNIP_CONFIG_FILE, it should return the path to the config that you created), -u and -p arguments are not necessary.
 
     $ ./gnip_search.py -uXXX -pXXX -f"from:Gnip" json
     {"body": "RT @bbi: The #BigBoulder bloggers have been busy. Head to http://t.co/Rwve0dVA82 for recaps of the Sina Weibo, Tumblr &amp; Academic Research s\u2026", "retweetCount": 3, "generator": {"link": "http://twitter.com", "displayName": "Twitter Web Client"}, "twitter_filter_level": "medium", "gnip": {"klout_profile": {"link": "http://klout.com/user/id/651348", "topics": [{"link": "http://klout.com/topic/id/5144818194631006088", "displayName": "Software", "
