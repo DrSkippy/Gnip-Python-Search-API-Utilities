@@ -116,7 +116,7 @@ class GnipSearchCMD():
         # depricated... leave in for compatibility
         twitter_parser.add_argument("-t", "--search-v2", dest="search_v2", action="store_true",
                 default=False, 
-                help="Using search API v2, which does not accept some of the standard parameters in a query")
+                help="Using search API v2 endpoint. [This is depricated and will be set automatically based on endpoint.]")
         return twitter_parser
     
     def get_result(self):

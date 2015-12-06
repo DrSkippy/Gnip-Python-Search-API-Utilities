@@ -57,8 +57,8 @@ optional arguments:
                         exists and will not be created. This options is
                         available only with -a option. Default is no output
                         files.
-  -t, --search-v2       Using search API v2, which does not accept some of the
-                        standard parameters in a query
+  -t, --search-v2       Using search API v2 endpoint. [This is depricated and
+                        is automatically set based on endpoint.]
 </pre>
 
 ##Using a configuration file
