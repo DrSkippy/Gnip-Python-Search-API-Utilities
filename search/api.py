@@ -118,6 +118,10 @@ class Query(object):
             s.headers = {'Accept-encoding': 'gzip'}
             s.auth = (self.user, self.password)
             res = s.post(self.stream_url, data=json.dumps(self.rule_payload))
+            if res.status_code != 200:
+                sys.stderr.write("Exiting with HTTP error code {}\n".format(res.status_code))
+                sys.stderr.write("ERROR Message: {}\n".format(res.json()["error"]["message"]))
+                sys.exit(-1)
         except requests.exceptions.ConnectionError, e:
             e.msg = "Error (%s). Exiting without results."%str(e)
             raise e
@@ -142,15 +146,11 @@ class Query(object):
         self.paged_file_list = []
         while repeat:
             doc = self.request()
-            try:
-                tmp_response = json.loads(doc)
-                if "results" in tmp_response:
-                    acs.extend(tmp_response["results"])
-                if "error" in tmp_response:
-                    raise ValueError("Invalid request\nQuery: %s\nResponse: %s"%(self.rule_payload, doc))
-            except ValueError, e:
-                e.msg = "Error. Failed to retrieve valid JSON activities:\n%s"%e
-                return []
+            tmp_response = json.loads(doc)
+            if "results" in tmp_response:
+                acs.extend(tmp_response["results"])
+            else:
+                raise ValueError("Invalid request\nQuery: %s\nResponse: %s"%(self.rule_payload, doc))
             if len(acs) < self.hard_max:
                 repeat = False
                 if self.paged or (count_bucket and self.search_v2):
@@ -301,7 +301,7 @@ class Query(object):
                 tmp_tl_list = [tmp_list[POSTED_TIME_IDX], 1, t]
             # this list is ***either*** list of buckets or list of tweet times!
             self.time_series.append(tmp_tl_list)
-            # timeline reqeusts don't return activities!
+            # timeline requests don't return activities!
             if t < self.oldest_t:
                 self.oldest_t = t
             if t > self.newest_t:

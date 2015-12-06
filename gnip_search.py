@@ -61,6 +61,9 @@ class GnipSearchCMD():
         # Search v2 uses a different url
         if "data-api.twitter.com" in self.stream_url:
             self.options.search_v2 = True
+        elif self.options.search_v2:
+            print >> sys.stderr, "WARNING: You set the search v2 flag, but your URL appears to point to a v1 endpoint."
+            self.options.search_v2 = False
 
     def config_file(self):
         config = ConfigParser.ConfigParser()
