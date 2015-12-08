@@ -65,6 +65,8 @@ class Query(object):
         # TODO: use the updated retriveal methods in gnacs instead of this?
         self.twitter_parser = TwacsCSV(",", None, False, True, False, True, False, False, False)
         self.search_v2 = search_v2
+        # Flag for post processing tweet timeline from tweet times
+        self.tweet_times_flag = False
 
     def set_dates(self, start, end):
         """Utility function to set dates from strings. Given string-formated 
@@ -198,12 +200,12 @@ class Query(object):
                         t = datetime.datetime.strptime(rec["timePeriod"], TIME_FORMAT_SHORT)
                         yield [rec["timePeriod"], rec["count"], t]
         else:
-            if self.bucket:
-                for i in self.time_series:
-                    yield i
-            else:
+            if self.tweet_times_flag:
                 # todo: list of tweets, aggregate by bucket
                 raise NotImplementedError("Aggregated buckets on json tweets not implemented!")
+            else:
+                for i in self.time_series:
+                    yield i
 
 
     def get_activity_set(self):
@@ -292,6 +294,7 @@ class Query(object):
                 # timeline data
                 t = datetime.datetime.strptime(rec["timePeriod"], TIME_FORMAT_SHORT)
                 tmp_tl_list = [rec["timePeriod"], rec["count"], t]
+                self.tweet_times_flag = False
             else:
                 # json activities
                 # keep track of tweet times for time calculation
@@ -299,6 +302,7 @@ class Query(object):
                 self.rec_list_list.append(tmp_list)
                 t = datetime.datetime.strptime(tmp_list[POSTED_TIME_IDX], TIME_FORMAT_LONG)
                 tmp_tl_list = [tmp_list[POSTED_TIME_IDX], 1, t]
+                self.tweet_times_flag = True
             # this list is ***either*** list of buckets or list of tweet times!
             self.time_series.append(tmp_tl_list)
             # timeline requests don't return activities!
