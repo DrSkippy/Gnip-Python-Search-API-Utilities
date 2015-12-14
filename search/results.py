@@ -21,6 +21,7 @@ sys.stdin = codecs.getreader('utf-8')(sys.stdin)
 DATE_INDEX = 1
 TEXT_INDEX = 2
 LINKS_INDEX = 3
+USER_ID_INDEX = 8
 USER_NAME_INDEX = 7 
 OUTPUT_PAGE_WIDTH = 120 
 BIG_COLUMN_WIDTH = 32
@@ -97,6 +98,13 @@ class Results():
         for x in self.query.get_list_set():
             self.freq.add(x[USER_NAME_INDEX])
         return self.freq.get_tokens(n) 
+
+    def get_users(self, n=None):
+        """Returns the user ids for the tweets collected"""
+        uniq_users = set()
+        for x in self.query.get_list_set():
+            uniq_users.add(x[USER_ID_INDEX])
+        return uniq_users
 
     def get_top_grams(self, n=20):
         self.freq = SimpleNGrams(char_upper_cutoff=20, tokenizer="twitter")
