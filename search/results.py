@@ -21,8 +21,8 @@ sys.stdin = codecs.getreader('utf-8')(sys.stdin)
 DATE_INDEX = 1
 TEXT_INDEX = 2
 LINKS_INDEX = 3
-USER_ID_INDEX = 8
 USER_NAME_INDEX = 7 
+USER_ID_INDEX = 8
 OUTPUT_PAGE_WIDTH = 120 
 BIG_COLUMN_WIDTH = 32
 

@@ -213,7 +213,6 @@ class GnipSearchCMD():
                     res.append(u"%100s -- %4d  %5.2f%% %4d  %5.2f%%"%(x[4], x[0], x[1]*100., x[2], x[3]*100.))
                 res.append("-"*WIDTH)
             elif self.options.use_case.startswith("audie"):
-                res[-1]+=u"-"*WIDTH
                 for x in self.results.get_users():
                     res.append(u"{}".format(x))
                 res.append("-"*WIDTH)
