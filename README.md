@@ -293,6 +293,27 @@ This can also be output in delimited format:
     477161932806692865,2014-06-12T18:54:04,None,None
     477161928377516032,2014-06-12T18:54:03,-51.08593214,0.03778787
 
+#### Audience
+
+Return the list of all of the users ids represented by matching activities
+
+    $ ./gnip_search.py -n15 -f "call mom" audience
+    --------------------------------------------------------------------------------
+    229152598
+    458139782
+    1371311486
+    356605896
+    1214494260
+    2651237064
+    2468197068
+    1473613993
+    408876524
+    245142830
+    2158092706
+    119980244
+    2207663371
+    291388723
+    3106639108
 
 ### Simple Timeseries Analysis
 

@@ -2,7 +2,7 @@ from distutils.core import setup
 
 setup(
     name='gapi',
-    version='1.0.0',
+    version='1.0.2',
     author='Scott Hendrickson, Josh Montague, Jeff Kolb',
     author_email='scott@drskippy.net',
     packages=['search'],
@@ -14,7 +14,7 @@ setup(
     install_requires=[
         "gnacs >= 1.0.0"
         , "sngrams >= 0.1.5"
-        , "requests > 2.2.0"
+        , "requests > 2.4.0"
         ],
     extras_require = {
         'timeseries':  ["numpy >= 1.10.1"

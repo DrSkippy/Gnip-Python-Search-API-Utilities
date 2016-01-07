@@ -21,7 +21,7 @@ DEFAULT_CONFIG_FILENAME = "./.gnip"
 
 class GnipSearchCMD():
 
-    USE_CASES = ["json", "wordcount","users", "rate", "links", "timeline", "geo"]
+    USE_CASES = ["json", "wordcount","users", "rate", "links", "timeline", "geo", "audience"]
     
     def __init__(self, token_list_size=20):
         # default tokenizer and character limit
@@ -211,6 +211,10 @@ class GnipSearchCMD():
                 res.append("-"*2*WIDTH)
                 for x in self.results.get_top_links(n=self.token_list_size):
                     res.append(u"%100s -- %4d  %5.2f%% %4d  %5.2f%%"%(x[4], x[0], x[1]*100., x[2], x[3]*100.))
+                res.append("-"*WIDTH)
+            elif self.options.use_case.startswith("audie"):
+                for x in self.results.get_users():
+                    res.append(u"{}".format(x))
                 res.append("-"*WIDTH)
         return u"\n".join(res)
 
