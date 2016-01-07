@@ -470,7 +470,8 @@ oregon standoff fed                    1         1
 
 </pre>
 
-Additionally, csv output of the raw counts and a csv version fo the pivot table output are provided.
+Additionally, csv output of the raw counts and a csv version of the pivot table are
+written to the specified data directory.
 
 #### Dependencies
 Gnip's Search 2.0 API access is required.
