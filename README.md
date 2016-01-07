@@ -429,6 +429,26 @@ optional arguments:
 
 Example output to compare 4 rules across 3 time periods:
 
+job.json:
+
+<pre>
+{
+    "rules":[
+            {"value":"drskippy"}
+            , {"value":"#silliness"}
+            , {"value":"oregon standoff fed"}
+            , {"value":"dogs", "tag":"Man's best friend"}
+            ],
+    "date_ranges": [
+            {"start":"2015-05-01T00:00:00", "end":"2015-06-01T00:00:00"}
+            , {"start":"2015-07-01T00:00:00", "end":"2015-08-01T00:00:00"}
+            , {"start":"2015-12-01T00:00:00", "end":"2015-12-31T00:00:00"}
+            ]
+}
+</pre>
+
+Output:
+
 <pre>
 $ ./gnip_filter_analysis.py 
 Writing data to ./data...
