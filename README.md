@@ -396,5 +396,75 @@ settings and intermediate outputs.
   backend      : Agg
 </pre>
 
+### Filter Analysis
+
+$ ./gnip_filter_analysis.py -h
+<pre>
+usage: gnip_filter_analysis.py [-h] [-j JOB_DESCRIPTION] [-b COUNT_BUCKET]
+                               [-l STREAM_URL] [-p PASSWORD] [-q] [-u USER]
+                               [-w OUTPUT_FILE_PATH]
+
+Creates an aggregated filter statistics summary from filter rules and date
+periods in the job description.
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -j JOB_DESCRIPTION, --job_description JOB_DESCRIPTION
+                        JSON formatted job description file
+  -b COUNT_BUCKET, --bucket COUNT_BUCKET
+                        Bucket size for counts query. Options are day, hour,
+                        minute (default is 'day').
+  -l STREAM_URL, --stream-url STREAM_URL
+                        Url of search endpoint. (See your Gnip console.)
+  -p PASSWORD, --password PASSWORD
+                        Password
+  -q, --query           View API query (no data)
+  -u USER, --user-name USER
+                        User name
+  -w OUTPUT_FILE_PATH, --output-file-path OUTPUT_FILE_PATH
+                        Create files in ./OUTPUT-FILE-PATH. This path must
+                        exists and will not be created. Default is ./data
+
+</pre>
+
+Example output to compare 4 rules across 3 time periods:
+
+<pre>
+$ ./gnip_filter_analysis.py 
+Writing data to ./data...
+start_date           2015-05-01T00:00:00  2015-07-01T00:00:00  \
+filter                                                          
+All                              3195359              3584217   
+dogs                             3194694              3583531   
+#silliness                           636                  653   
+drskippy                              29                   33   
+oregon standoff fed                    0                    0   
+
+start_date           2015-12-01T00:00:00       All  
+filter                                              
+All                              3983981  10763557  
+dogs                             3983504  10761729  
+#silliness                           455      1744  
+drskippy                              21        83  
+oregon standoff fed                    1         1 
+
+</pre>
+
+Additionally, csv output of the raw counts and a csv version fo the pivot table output are provided.
+
+#### Dependencies
+Gnip's Search 2.0 API access is required.
+
+In addition to the the basic Gnip Search utility described immediately above, this pakage
+depends on a number of other large packges:
+
+* numpy
+* pandas
+
+#### Notes
+* Unlike other utilities provided, the defualt file path is set to "./data" to provide 
+full accsess to output results. Therefore, you should create the path "data" in the directory 
+where you run the utility. This will contain the data ouputs.
+
 ## License
 Gnip-Python-Search-API-Utilities by Scott Hendrickson, Josh Montague and Jeff Kolb is licensed under a Creative Commons Attribution-ShareAlike 3.0 Unported License. This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 Unported License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.
