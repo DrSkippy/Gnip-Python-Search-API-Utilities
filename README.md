@@ -401,8 +401,8 @@ settings and intermediate outputs.
 $ ./gnip_filter_analysis.py -h
 <pre>
 usage: gnip_filter_analysis.py [-h] [-j JOB_DESCRIPTION] [-b COUNT_BUCKET]
-                               [-l STREAM_URL] [-p PASSWORD] [-q] [-u USER]
-                               [-w OUTPUT_FILE_PATH]
+                               [-l STREAM_URL] [-p PASSWORD] [-r RANK_SAMPLE]
+                               [-q] [-u USER] [-w OUTPUT_FILE_PATH]
 
 Creates an aggregated filter statistics summary from filter rules and date
 periods in the job description.
@@ -418,6 +418,10 @@ optional arguments:
                         Url of search endpoint. (See your Gnip console.)
   -p PASSWORD, --password PASSWORD
                         Password
+  -r RANK_SAMPLE, --rank_sample RANK_SAMPLE
+                        Rank inclusive sampling depth. Default is None. This
+                        runs filter rule production for rank1, rank1 OR rank2,
+                        rank1 OR rank2 OR rank3, etc.to the depths specifed.
   -q, --query           View API query (no data)
   -u USER, --user-name USER
                         User name
@@ -427,48 +431,85 @@ optional arguments:
 
 </pre>
 
-Example output to compare 4 rules across 3 time periods:
+Example output to compare 7 rules across 2 time periods:
 
 job.json:
 
 <pre>
 {
-    "rules":[
-            {"value":"drskippy"}
-            , {"value":"#silliness"}
-            , {"value":"oregon standoff fed"}
-            , {"value":"dogs", "tag":"Man's best friend"}
-            ],
-    "date_ranges": [
-            {"start":"2015-05-01T00:00:00", "end":"2015-06-01T00:00:00"}
-            , {"start":"2015-07-01T00:00:00", "end":"2015-08-01T00:00:00"}
-            , {"start":"2015-12-01T00:00:00", "end":"2015-12-31T00:00:00"}
-            ]
+  "date_ranges": [
+    {
+      "end": "2015-06-01T00:00:00",
+      "start": "2015-05-01T00:00:00"
+    },
+    {
+      "end": "2015-12-01T00:00:00",
+      "start": "2015-11-01T00:00:00"
+    }
+  ],
+  "rules": [
+    {
+      "tag": "common pet",
+      "value": "dog"
+    },
+    {
+      "tag": "common pet",
+      "value": "cat"
+    },
+    {
+      "tag": "common pet",
+      "value": "hamster"
+    },
+    {
+      "tag": "abstract pet",
+      "value": "pet"
+    },
+    {
+      "tag": "pet owner destination",
+      "value": "vet"
+    },
+    {
+      "tag": "pet owner destination",
+      "value": "kennel"
+    },
+    {
+      "tag": "diminutives",
+      "value": "puppy OR kitten"
+    }
+  ]
 }
+
 </pre>
 
 Output:
 
 <pre>
-$ ./gnip_filter_analysis.py 
-Writing data to ./data...
-start_date           2015-05-01T00:00:00  2015-07-01T00:00:00  \
-filter                                                          
-All                              3195359              3584217   
-dogs                             3194694              3583531   
-#silliness                           636                  653   
-drskippy                              29                   33   
-oregon standoff fed                    0                    0   
+$ ./gnip_filter_analysis.py -r 3
+...
+start_date                                          2015-05-01T00:00:00  2015-11-01T00:00:00       All
+filter                                                                                                
+All                                                            42691589             46780243  89471832
+dog OR cat OR hamster OR pet OR vet OR kennel O...             20864710             22831053  43695763
+dog                                                             8096637              9218028  17314665
+cat                                                             8378681              8705244  17083925
+puppy OR kitten                                                 2392041              2659051   5051092
+pet                                                             2101044              2345140   4446184
+vet                                                              620178               749802   1369980
+hamster                                                          199634               226864    426498
+kennel                                                            38664                45061     83725
 
-start_date           2015-12-01T00:00:00       All  
-filter                                              
-All                              3983981  10763557  
-dogs                             3983504  10761729  
-#silliness                           455      1744  
-drskippy                              21        83  
-oregon standoff fed                    1         1 
+start_date                                          2015-05-01T00:00:00  2015-11-01T00:00:00        All
+filter                                                                                                 
+All                                                            63640524             69822220  133462744
+dog OR cat OR hamster OR pet OR vet OR kennel O...             20864710             22831053   43695763
+dog OR cat OR puppy OR kitten                                  18410402             20096764   38507166
+dog OR cat                                                     16268900             17662083   33930983
+dog                                                             8096512              9232320   17328832
+/pre>
 
-</pre>
+So for this rule set, the redundancy is 89471832/43695763. - 1 = 1.0476088722835666 and the
+3 rule approximation for the corpus gives 38507166/43695763. = 0.8812562902265832 or 88% of
+of the tweets of the full rule set.
 
 Additionally, csv output of the raw counts and a csv version of the pivot table are
 written to the specified data directory.

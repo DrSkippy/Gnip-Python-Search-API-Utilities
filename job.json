@@ -2,12 +2,14 @@
     "rules":[
               {"value":"dog", "tag":"common pet"}
             , {"value":"cat", "tag":"common pet"}
+            , {"value":"hamster", "tag":"common pet"}
             , {"value":"pet", "tag":"abstract pet"}
             , {"value":"vet", "tag":"pet owner destination"}
-            , {"value":"puppy or kitten", "tag":"diminutives"}
+            , {"value":"kennel", "tag":"pet owner destination"}
+            , {"value":"puppy OR kitten", "tag":"diminutives"}
             ],
     "date_ranges": [
             {"start":"2015-05-01T00:00:00", "end":"2015-06-01T00:00:00"}
-            , {"start":"2015-12-01T00:00:00", "end":"2015-12-31T00:00:00"}
+            , {"start":"2015-11-01T00:00:00", "end":"2015-12-01T00:00:00"}
             ]
 }

@@ -120,7 +120,7 @@ the depths specifed.")
         return twitter_parser
 
     def read_job_description(self, job_description):
-        with open(job_description, "rb") as f:
+        with codecs.open(job_description, "rb", "utf-8") as f:
             self.job_description = json.load(f)
         if not all([x in self.job_description for x in ("rules", "date_ranges")]):
             print >>sys.stderr, '"rules" or "date_ranges" missing from you job description file. Exiting'
@@ -188,21 +188,29 @@ the depths specifed.")
             f.write(pdf.to_csv(encoding='utf-8'))
 
     def get_result(self):
+        all_rules = []
         res = []
         for rule_dict in self.job_description["rules"]:
-            rule = rule_dict["value"].decode("utf-8")
+            rule = rule_dict["value"]
+            all_rules.append(rule)
             tag = None
             if "tag" in rule_dict:
                 tag = rule_dict["tag"]
             res.extend(self.get_date_ranges_for_rule(rule, tag))
+        filter_str = u" OR ".join(all_rules)
+        all_rules_res = self.get_date_ranges_for_rule(filter_str)
+        res.extend(all_rules_res)
         df, pdf = self.get_pivot_table(res)
         if self.options.output_file_path is not None:
             self.write_output_files(df, pdf)
         # rank inclusive
         rdf, rpdf = None, None
         if self.options.rank_sample is not None:
-            rank_list = pdf.index.values[1:1+int(self.options.rank_sample)]
-            res =[]
+            # because margin = True, we have an "all" row at the top
+            # the second row will be the all_rules results, skip these too
+            # therefore, start at the third row 
+            rank_list = pdf.index.values[2:2+int(self.options.rank_sample)]
+            res = all_rules_res
             for i in range(int(self.options.rank_sample)):
                 filter_str = u" OR ".join(rank_list[:i+1])
                 res.extend(self.get_date_ranges_for_rule(filter_str))
@@ -214,6 +222,9 @@ the depths specifed.")
 if __name__ == "__main__":
     g = GnipSearchCMD()
     df, pdf, rdf, rpdf = g.get_result()
-    print pdf
+    sys.stdout.write(pdf.to_string())
+    print
+    print
     if rpdf is not None:
-        print rpdf
+        sys.stdout.write(rpdf.to_string())
+        print
