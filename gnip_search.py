@@ -49,6 +49,7 @@ class GnipSearchCMD():
                 print >> sys.stderr, "Error reading configuration file ({}), ignoring configuration file.".format(e)
         # parse the command line options
         self.options = self.args().parse_args()
+        self.options.filter = self.options.filter.decode("utf-8")
         # set up the job
         # over ride config file with command line args if present
         if self.options.user is not None:

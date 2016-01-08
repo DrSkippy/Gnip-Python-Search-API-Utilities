@@ -10,6 +10,7 @@ import datetime
 import time
 import os
 import re
+import unicodedata
 
 from acscsv.twitter_acs import TwacsCSV
 
@@ -110,7 +111,9 @@ class Query(object):
         f = f.replace('"','_Q_')
         f = f.replace('(','_p_') 
         f = f.replace(')','_p_') 
-        self.file_name_prefix = f[:42]
+        self.file_name_prefix = unicodedata.normalize(
+                "NFKD",f[:42]).encode(
+                        "ascii","ignore")
 
     def request(self):
         """HTTP request based on class variables for rule_payload, 

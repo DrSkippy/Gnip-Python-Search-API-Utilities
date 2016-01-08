@@ -8,10 +8,13 @@ import codecs
 import argparse
 import datetime
 import time
+import numbers
 import os
-import csv
 import ConfigParser
-
+try:
+        from cStringIO import StringIO
+except:
+        from StringIO import StringIO
 import pandas as pd
 import numpy as np
 
@@ -94,12 +97,18 @@ class GnipSearchCMD():
                 help="JSON formatted job description file")
         twitter_parser.add_argument("-b", "--bucket", dest="count_bucket", 
                 default="day", 
-                help="Bucket size for counts query. Options are day, hour, minute (default is 'day').")
+                help="Bucket size for counts query. Options are day, hour, \
+minute (default is 'day').")
         twitter_parser.add_argument("-l", "--stream-url", dest="stream_url", 
                 default=None,
                 help="Url of search endpoint. (See your Gnip console.)")
         twitter_parser.add_argument("-p", "--password", dest="password", default=None, 
                 help="Password")
+        twitter_parser.add_argument("-r", "--rank_sample", dest="rank_sample"
+                , default=None
+                , help="Rank inclusive sampling depth. Default is None. This runs filter rule \
+production for rank1, rank1 OR rank2, rank1 OR rank2 OR rank3, etc.to \
+the depths specifed.")
         twitter_parser.add_argument("-q", "--query", dest="query", action="store_true", 
                 default=False, help="View API query (no data)")
         twitter_parser.add_argument("-u", "--user-name", dest="user", default=None,
@@ -117,60 +126,94 @@ class GnipSearchCMD():
             print >>sys.stderr, '"rules" or "date_ranges" missing from you job description file. Exiting'
             sys.exit(-1)
     
+    def get_date_ranges_for_rule(self, rule, tag=None):
+        res = []
+        for dates_dict in self.job_description["date_ranges"]:
+            start_date = dates_dict["start"]
+            end_date = dates_dict["end"]
+            results = Results(
+                self.user
+                , self.password
+                , self.stream_url
+                , self.options.paged
+                , self.options.output_file_path
+                , pt_filter=rule
+                , max_results=int(self.options.max)
+                , start=start_date
+                , end=end_date
+                , count_bucket=self.options.count_bucket
+                , show_query=self.options.query
+                , search_v2=self.options.search_v2
+                )
+            for x in results.get_time_series():
+                res.append(x + [rule, tag,  start_date, end_date])
+        return res
+
+    def get_pivot_table(self, res):
+        df = pd.DataFrame(res
+            , columns=("bucket_datetag"
+                    ,"counts"
+                    ,"bucket_datetime"
+                    ,"filter"
+                    ,"filter_tag"
+                    ,"start_date"
+                    ,"end_date"))
+        pdf = pd.pivot_table(df
+            , values="counts"
+            , index=["filter"]
+            , columns = ["start_date"]
+            , margins = True
+            , aggfunc=np.sum)
+        pdf.sort_values("All"
+            , inplace=True
+            , ascending=False)
+        return df, pdf
+
+    def write_output_files(self, df, pdf, pre=""):
+        print >> sys.stderr, "Writing results to file..."
+        if pre != "":
+            pre += "_"
+        print >> sys.stderr,"Writing data to {}...".format(self.options.output_file_path)
+        with open("{}/{}_{}raw_data.csv".format(
+                    self.options.output_file_path
+                    , datetime.datetime.now().strftime("%Y%m%d_%H%M")
+                    , pre)
+                , "wb") as f:
+            f.write(df.to_csv(encoding='utf-8'))
+        with open("{}/{}_{}pivot_data.csv".format(
+                    self.options.output_file_path
+                    , datetime.datetime.now().strftime("%Y%m%d_%H%M")
+                    , pre)
+                , "wb") as f:
+            f.write(pdf.to_csv(encoding='utf-8'))
+
     def get_result(self):
-        res = [["raw output"]]
+        res = []
         for rule_dict in self.job_description["rules"]:
-            rule = rule_dict["value"]
+            rule = rule_dict["value"].decode("utf-8")
             tag = None
             if "tag" in rule_dict:
                 tag = rule_dict["tag"]
-            for dates_dict in self.job_description["date_ranges"]:
-                start_date = dates_dict["start"]
-                end_date = dates_dict["end"]
-                results = Results(
-                    self.user
-                    , self.password
-                    , self.stream_url
-                    , self.options.paged
-                    , self.options.output_file_path
-                    , pt_filter=rule
-                    , max_results=int(self.options.max)
-                    , start=start_date
-                    , end=end_date
-                    , count_bucket=self.options.count_bucket
-                    , show_query=self.options.query
-                    , search_v2=self.options.search_v2
-                    )
-                for x in results.get_time_series():
-                    res.append(x + [rule, tag,  start_date, end_date])
-        df = pd.DataFrame(res
-                , columns=("bucket_datetag","counts","bucket_datetime","filter","filter_tag","start_date","end_date"))
-        table = pd.pivot_table(df
-                , values="counts"
-                , index=["filter"]
-                , columns = ["start_date"]
-                , margins = True
-                , aggfunc=np.sum)
-        table.sort_values("All"
-                , inplace=True
-                , ascending=False)
-        # outputs
+            res.extend(self.get_date_ranges_for_rule(rule, tag))
+        df, pdf = self.get_pivot_table(res)
         if self.options.output_file_path is not None:
-            print >> sys.stderr,"Writing data to {}...".format(self.options.output_file_path)
-            with open("{}/{}_raw_data.csv".format(
-                        self.options.output_file_path
-                        , datetime.datetime.now().strftime("%Y%m%d_%H%M"))
-                    , "wb") as f:
-                wrt = csv.writer(f)
-                wrt.writerows(res)
-            with open("{}/{}_pivot_data.csv".format(
-                        self.options.output_file_path
-                        , datetime.datetime.now().strftime("%Y%m%d_%H%M"))
-                    , "wb") as f:
-                f.write(table.to_csv())
-        return res, table
+            self.write_output_files(df, pdf)
+        # rank inclusive
+        rdf, rpdf = None, None
+        if self.options.rank_sample is not None:
+            rank_list = pdf.index.values[1:1+int(self.options.rank_sample)]
+            res =[]
+            for i in range(int(self.options.rank_sample)):
+                filter_str = u" OR ".join(rank_list[:i+1])
+                res.extend(self.get_date_ranges_for_rule(filter_str))
+            rdf, rpdf = self.get_pivot_table(res)
+            if self.options.output_file_path is not None:
+                self.write_output_files(rdf, rpdf, pre="ranked")
+        return df, pdf, rdf, rpdf
 
 if __name__ == "__main__":
     g = GnipSearchCMD()
-    r,t = g.get_result()
-    print t
+    df, pdf, rdf, rpdf = g.get_result()
+    print pdf
+    if rpdf is not None:
+        print rpdf
