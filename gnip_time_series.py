@@ -130,7 +130,23 @@ class GnipSearchTimeseries():
         self.options.search_v2 = True
         self.options.max = 500
         self.options.query = False
-        
+
+        # check paths
+        if self.options.output_file_path is not None:
+            if not os.path.exists(self.options.output_file_path):
+                logging.error("Path {} doesn't exist. Please create it and try again. Exiting.".format(
+                    self.options.output_file_path))
+                sys.stderr.write("Path {} doesn't exist. Please create it and try again. Exiting.\n".format(
+                    self.options.output_file_path))
+                sys.exit(-1)
+
+        if not os.path.exists(PLOTS_PREFIX):
+            logging.error("Path {} doesn't exist. Please create it and try again. Exiting.".format(
+                PLOTS_PREFIX))
+            sys.stderr.write("Path {} doesn't exist. Please create it and try again. Exiting.\n".format(
+                PLOTS_PREFIX))
+            sys.exit(-1)
+
         # log the attributes of this class including all of the options
         for v in dir(self):
             # except don't log the password!
