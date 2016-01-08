@@ -122,7 +122,8 @@ class GnipSearchTimeseries():
         # search v2 uses a different url
         if "data-api.twitter.com" not in self.stream_url:
             logging.error("gnipSearch timeline tools require Search V2. Exiting.")
-            exit(-1)
+            sys.stderr.write("gnipSearch timeline tools require Search V2. Exiting.\n")
+            sys.exit(-1)
 
         # set some options that should not be changed for this anaysis
         self.options.paged = True
@@ -293,6 +294,7 @@ class GnipSearchTimeseries():
                 n_avgs[t.minute].append(c)
         else:
             sys.stderr.write("Weird interval problem! Exiting.\n")
+            logging.error("Weird interval problem! Exiting.\n")
             sys.exit()
         logging.info("averaging over periods of {} buckets".format(n_buckets))
         # remove upper outliers from averages 
