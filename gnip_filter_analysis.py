@@ -59,7 +59,7 @@ class GnipSearchCMD():
                 self.stream_url = config_from_file.get('endpoint', 'url')
             except (ConfigParser.NoOptionError,
                     ConfigParser.NoSectionError) as e:
-                logging.warn("Error reading configuration file ({}), ignoring configuration file.".format(e))
+                logging.debug(u"Error reading configuration file ({}), ignoring configuration file.".format(e))
         # parse the command line options
         self.options = self.args().parse_args()
         # set up the job
@@ -75,7 +75,7 @@ class GnipSearchCMD():
         if "data-api.twitter.com" in self.stream_url:
             self.options.search_v2 = True
         else:
-            logging.error("Requires search v2, but your URL appears to point to a v1 endpoint. Exiting.")
+            logging.debug(u"Requires search v2, but your URL appears to point to a v1 endpoint. Exiting.")
             print >> sys.stderr, "Requires search v2, but your URL appears to point to a v1 endpoint. Exiting."
             sys.exit(-1)
         # defaults
@@ -85,7 +85,7 @@ class GnipSearchCMD():
         # check paths
         if self.options.output_file_path is not None:
             if not os.path.exists(self.options.output_file_path):
-                logging.error("Path {} doesn't exist. Please create it and try again. Exiting.".format(
+                logging.debug(u"Path {} doesn't exist. Please create it and try again. Exiting.".format(
                     self.options.output_file_path))
                 sys.stderr.write("Path {} doesn't exist. Please create it and try again. Exiting.\n".format(
                     self.options.output_file_path))
@@ -97,7 +97,7 @@ class GnipSearchCMD():
             if not v.startswith('__') and not callable(getattr(self,v)) and not v.lower().startswith('password'):
                 tmp = str(getattr(self,v))
                 tmp = re.sub("password=.*,", "password=XXXXXXX,", tmp) 
-                logging.debug("  {}={}".format(v, tmp))
+                logging.debug(u"  {}={}".format(v, tmp))
         #
         self.job = self.read_job_description(self.options.job_description)
 
@@ -169,7 +169,7 @@ class GnipSearchCMD():
         for dates_dict in self.job_description["date_ranges"]:
             start_date = dates_dict["start"]
             end_date = dates_dict["end"]
-            logging.debug("getting date range for {} through {}".format(start_date, end_date))
+            logging.debug(u"getting date range for {} through {}".format(start_date, end_date))
             results = Results(
                 self.user
                 , self.password
@@ -207,13 +207,13 @@ class GnipSearchCMD():
         pdf.sort_values("All"
             , inplace=True
             , ascending=False)
-        logging.debug("pivot tables calculated with shape(df)={} and shape(pdf)={}".format(df.shape, pdf.shape))
+        logging.debug(u"pivot tables calculated with shape(df)={} and shape(pdf)={}".format(df.shape, pdf.shape))
         return df, pdf
 
     def write_output_files(self, df, pdf, pre=""):
         if pre != "":
             pre += "_"
-        logging.debug("Writing raw and pivot data to {}...".format(self.options.output_file_path))
+        logging.debug(u"Writing raw and pivot data to {}...".format(self.options.output_file_path))
         with open("{}/{}_{}raw_data.csv".format(
                     self.options.output_file_path
                     , datetime.datetime.now().strftime("%Y%m%d_%H%M")
@@ -238,7 +238,7 @@ class GnipSearchCMD():
         for rule_dict in self.job_description["rules"]:
             # in the case that rule is compound, ensure grouping
             rule = u"(" + rule_dict["value"] + u")" + negation_clause
-            logging.debug("rule str={}".format(rule))
+            logging.debug(u"rule str={}".format(rule))
             all_rules.append(rule_dict["value"])
             tag = None
             if "tag" in rule_dict:
@@ -250,7 +250,7 @@ class GnipSearchCMD():
                 ))
         # All rules 
         filter_str = u"(" + u" OR ".join(all_rules) + u")"
-        logging.debug("All rules str={}".format(filter_str + negation_clause))
+        logging.debug(u"All rules str={}".format(filter_str + negation_clause))
         all_rules_res = self.get_date_ranges_for_rule(
                 filter_str + negation_clause
                 , filter_str
@@ -273,7 +273,7 @@ class GnipSearchCMD():
                     filter_str = "((" + u") -(".join(rank_list[i+1::-1]) + "))"
                 else:
                     filter_str = "((" + u") OR (".join(rank_list[:i+1]) + "))"
-                logging.debug("rank rules str={}".format(filter_str + negation_clause))
+                logging.debug(u"rank rules str={}".format(filter_str + negation_clause))
                 res.extend(self.get_date_ranges_for_rule(
                     filter_str + negation_clause
                     , filter_str
