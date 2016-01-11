@@ -249,13 +249,26 @@ class GnipSearchCMD():
                 , tag=tag
                 ))
         # All rules 
-        filter_str = u"(" + u" OR ".join(all_rules) + u")"
-        logging.debug(u"All rules str={}".format(filter_str + negation_clause))
-        all_rules_res = self.get_date_ranges_for_rule(
-                filter_str + negation_clause
-                , filter_str
-                , tag=None
-                )
+        all_rules_res = []
+        sub_all_rules = []
+        filter_str_last = u"(" + u" OR ".join(sub_all_rules) + u")"
+        for rule in all_rules:
+            # try adding one more rule
+            sub_all_rules.append(rule)
+            filter_str = u"(" + u" OR ".join(sub_all_rules) + u")"
+            if len(filter_str + negation_clause) > 2048:
+                # back up one rule if the length is too too long
+                filter_str = filter_str_last
+                logging.debug(u"All rules str={}".format(filter_str + negation_clause))
+                all_rules_res = self.get_date_ranges_for_rule(
+                    filter_str + negation_clause
+                    , filter_str
+                    , tag=None
+                    )
+                # start a new sublist
+                sub_all_rules = [rule]
+                filter_str = u"(" + u" OR ".join(sub_all_rules) + u")"
+            filter_str_last = filter_str
         res.extend(all_rules_res)
         df, pdf = self.get_pivot_table(res)
         if self.options.output_file_path is not None:
