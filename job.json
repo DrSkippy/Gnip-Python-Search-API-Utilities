@@ -8,6 +8,12 @@
             , {"value":"kennel", "tag":"pet owner destination"}
             , {"value":"puppy OR kitten", "tag":"diminutives"}
             ],
+    "negation_rules":[
+              {"value":"tracter", "tag":"type of cat"}
+            , {"value":"dozer", "tag":"type of cat"}
+            , {"value":"grader", "tag":"type of cat"}
+            , {"value":"\"skid loader\"", "tag":"type of cat"}
+            ],
     "date_ranges": [
             {"start":"2015-05-01T00:00:00", "end":"2015-06-01T00:00:00"}
             , {"start":"2015-11-01T00:00:00", "end":"2015-12-01T00:00:00"}

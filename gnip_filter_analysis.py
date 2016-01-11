@@ -91,14 +91,15 @@ class GnipSearchCMD():
 
     def args(self):
         twitter_parser = argparse.ArgumentParser(
-                description="Creates an aggregated filter statistics summary from filter rules and date periods in the job description.")
+                description="Creates an aggregated filter statistics summary from \
+                    filter rules and date periods in the job description.")
         twitter_parser.add_argument("-j", "--job_description", dest="job_description",
                 default="./job.json",
                 help="JSON formatted job description file")
         twitter_parser.add_argument("-b", "--bucket", dest="count_bucket", 
                 default="day", 
                 help="Bucket size for counts query. Options are day, hour, \
-minute (default is 'day').")
+                    minute (default is 'day').")
         twitter_parser.add_argument("-l", "--stream-url", dest="stream_url", 
                 default=None,
                 help="Url of search endpoint. (See your Gnip console.)")
@@ -107,15 +108,25 @@ minute (default is 'day').")
         twitter_parser.add_argument("-r", "--rank_sample", dest="rank_sample"
                 , default=None
                 , help="Rank inclusive sampling depth. Default is None. This runs filter rule \
-production for rank1, rank1 OR rank2, rank1 OR rank2 OR rank3, etc.to \
-the depths specifed.")
+                    production for rank1, rank1 OR rank2, rank1 OR rank2 OR rank3, etc.to \
+                    the depths specifed.")
+        twitter_parser.add_argument("-m", "--rank_negation_sample", dest="rank_negation_sample"
+                , default=False
+                , action="store_true"
+                , help="Like rank inclusive sampling, but rules of higher ranks are negated \
+                    on successive retrievals. Uses rank_sample setting.")
+        twitter_parser.add_argument("-n", "--negation_rules", dest="negation_rules"
+                , default=False
+                , action="store_true"
+                , help="Apply entire negation rules list to all queries")
         twitter_parser.add_argument("-q", "--query", dest="query", action="store_true", 
                 default=False, help="View API query (no data)")
         twitter_parser.add_argument("-u", "--user-name", dest="user", default=None,
                 help="User name")
         twitter_parser.add_argument("-w", "--output-file-path", dest="output_file_path", 
                 default="./data",
-                help="Create files in ./OUTPUT-FILE-PATH. This path must exists and will not be created. Default is ./data")
+                help="Create files in ./OUTPUT-FILE-PATH. This path must exists and will \
+                    not be created. Default is ./data")
 
         return twitter_parser
 
@@ -188,16 +199,21 @@ the depths specifed.")
             f.write(pdf.to_csv(encoding='utf-8'))
 
     def get_result(self):
+        if self.options.negation_rules and self.job_description["negation_rules"] is not None:
+            negation_rules = [x["value"] for x in self.job_description["negation_rules"]]
+            negation_clause = " -(" + " OR ".join(negation_rules) + ")"
+        else:
+            negation_clause = ""
         all_rules = []
         res = []
         for rule_dict in self.job_description["rules"]:
-            rule = rule_dict["value"]
-            all_rules.append(rule)
+            rule = "(" + rule_dict["value"] + ")" + negation_clause
+            all_rules.append(rule_dict["value"])
             tag = None
             if "tag" in rule_dict:
                 tag = rule_dict["tag"]
             res.extend(self.get_date_ranges_for_rule(rule, tag))
-        filter_str = u" OR ".join(all_rules)
+        filter_str = "(" + u" OR ".join(all_rules) + ")" + negation_clause
         all_rules_res = self.get_date_ranges_for_rule(filter_str)
         res.extend(all_rules_res)
         df, pdf = self.get_pivot_table(res)
@@ -212,7 +228,10 @@ the depths specifed.")
             rank_list = pdf.index.values[2:2+int(self.options.rank_sample)]
             res = all_rules_res
             for i in range(int(self.options.rank_sample)):
-                filter_str = u" OR ".join(rank_list[:i+1])
+                if self.options.rank_negation_sample:
+                    filter_str = "(" + u" -".join(rank_list[i+1::-1]) + ")" + negation_clause
+                else:
+                    filter_str = "(" + u" OR ".join(rank_list[:i+1]) + ")" + negation_clause
                 res.extend(self.get_date_ranges_for_rule(filter_str))
             rdf, rpdf = self.get_pivot_table(res)
             if self.options.output_file_path is not None:
