@@ -27,7 +27,7 @@ sys.stdout = codecs.getwriter('utf-8')(sys.stdout)
 sys.stdin = codecs.getreader('utf-8')(sys.stdin)
 
 DEFAULT_CONFIG_FILENAME = "./.gnip"
-LOG_FILE_PATH = os.path.join(".","time_series.log")
+LOG_FILE_PATH = os.path.join(".","filter_analysis.log")
 
 # set up simple logging
 logging.basicConfig(filename=LOG_FILE_PATH,level=logging.DEBUG)
@@ -82,6 +82,23 @@ class GnipSearchCMD():
         self.options.paged = True
         self.options.max = 500
         # 
+        # check paths
+        if self.options.output_file_path is not None:
+            if not os.path.exists(self.options.output_file_path):
+                logging.error("Path {} doesn't exist. Please create it and try again. Exiting.".format(
+                    self.options.output_file_path))
+                sys.stderr.write("Path {} doesn't exist. Please create it and try again. Exiting.\n".format(
+                    self.options.output_file_path))
+                sys.exit(-1)
+        #
+        # log the attributes of this class including all of the options
+        for v in dir(self):
+            # except don't log the password!
+            if not v.startswith('__') and not callable(getattr(self,v)) and not v.lower().startswith('password'):
+                tmp = str(getattr(self,v))
+                tmp = re.sub("password=.*,", "password=XXXXXXX,", tmp) 
+                logging.debug("  {}={}".format(v, tmp))
+        #
         self.job = self.read_job_description(self.options.job_description)
 
     def config_file(self):
@@ -143,14 +160,16 @@ class GnipSearchCMD():
         with codecs.open(job_description, "rb", "utf-8") as f:
             self.job_description = json.load(f)
         if not all([x in self.job_description for x in ("rules", "date_ranges")]):
-            print >>sys.stderr, '"rules" or "date_ranges" missing from you job description file. Exiting'
+            print >>sys.stderr, '"rules" or "date_ranges" missing from you job description file. Exiting.\n'
+            logging.error('"rules" or "date_ranges" missing from you job description file. Exiting')
             sys.exit(-1)
     
-    def get_date_ranges_for_rule(self, rule, tag=None):
+    def get_date_ranges_for_rule(self, rule, base_rule, tag=None):
         res = []
         for dates_dict in self.job_description["date_ranges"]:
             start_date = dates_dict["start"]
             end_date = dates_dict["end"]
+            logging.debug("getting date range for {} through {}".format(start_date, end_date))
             results = Results(
                 self.user
                 , self.password
@@ -166,7 +185,7 @@ class GnipSearchCMD():
                 , search_v2=self.options.search_v2
                 )
             for x in results.get_time_series():
-                res.append(x + [rule, tag,  start_date, end_date])
+                res.append(x + [rule, tag,  start_date, end_date, base_rule])
         return res
 
     def get_pivot_table(self, res):
@@ -177,23 +196,24 @@ class GnipSearchCMD():
                     ,"filter"
                     ,"filter_tag"
                     ,"start_date"
-                    ,"end_date"))
+                    ,"end_date"
+                    ,"base_rule"))
         pdf = pd.pivot_table(df
             , values="counts"
-            , index=["filter"]
+            , index=["filter", "base_rule"]
             , columns = ["start_date"]
             , margins = True
             , aggfunc=np.sum)
         pdf.sort_values("All"
             , inplace=True
             , ascending=False)
+        logging.debug("pivot tables calculated with shape(df)={} and shape(pdf)={}".format(df.shape, pdf.shape))
         return df, pdf
 
     def write_output_files(self, df, pdf, pre=""):
-        print >> sys.stderr, "Writing results to file..."
         if pre != "":
             pre += "_"
-        print >> sys.stderr,"Writing data to {}...".format(self.options.output_file_path)
+        logging.debug("Writing raw and pivot data to {}...".format(self.options.output_file_path))
         with open("{}/{}_{}raw_data.csv".format(
                     self.options.output_file_path
                     , datetime.datetime.now().strftime("%Y%m%d_%H%M")
@@ -216,32 +236,49 @@ class GnipSearchCMD():
         all_rules = []
         res = []
         for rule_dict in self.job_description["rules"]:
-            rule = "(" + rule_dict["value"] + ")" + negation_clause
+            # in the case that rule is compound, ensure grouping
+            rule = u"(" + rule_dict["value"] + u")" + negation_clause
+            logging.debug("rule str={}".format(rule))
             all_rules.append(rule_dict["value"])
             tag = None
             if "tag" in rule_dict:
                 tag = rule_dict["tag"]
-            res.extend(self.get_date_ranges_for_rule(rule, tag))
-        filter_str = "(" + u" OR ".join(all_rules) + ")" + negation_clause
-        all_rules_res = self.get_date_ranges_for_rule(filter_str)
+            res.extend(self.get_date_ranges_for_rule(
+                rule
+                , rule_dict["value"]
+                , tag=tag
+                ))
+        # All rules 
+        filter_str = u"(" + u" OR ".join(all_rules) + u")"
+        logging.debug("All rules str={}".format(filter_str + negation_clause))
+        all_rules_res = self.get_date_ranges_for_rule(
+                filter_str + negation_clause
+                , filter_str
+                , tag=None
+                )
         res.extend(all_rules_res)
         df, pdf = self.get_pivot_table(res)
         if self.options.output_file_path is not None:
             self.write_output_files(df, pdf)
-        # rank inclusive
+        # rank inclusive results
         rdf, rpdf = None, None
         if self.options.rank_sample is not None:
             # because margin = True, we have an "all" row at the top
             # the second row will be the all_rules results, skip these too
             # therefore, start at the third row 
-            rank_list = pdf.index.values[2:2+int(self.options.rank_sample)]
+            rank_list = [x[1] for x in pdf.index.values[2:2+int(self.options.rank_sample)]]
             res = all_rules_res
             for i in range(int(self.options.rank_sample)):
                 if self.options.rank_negation_sample:
-                    filter_str = "(" + u" -".join(rank_list[i+1::-1]) + ")" + negation_clause
+                    filter_str = "((" + u") -(".join(rank_list[i+1::-1]) + "))"
                 else:
-                    filter_str = "(" + u" OR ".join(rank_list[:i+1]) + ")" + negation_clause
-                res.extend(self.get_date_ranges_for_rule(filter_str))
+                    filter_str = "((" + u") OR (".join(rank_list[:i+1]) + "))"
+                logging.debug("rank rules str={}".format(filter_str + negation_clause))
+                res.extend(self.get_date_ranges_for_rule(
+                    filter_str + negation_clause
+                    , filter_str
+                    , tag=None
+                    ))
             rdf, rpdf = self.get_pivot_table(res)
             if self.options.output_file_path is not None:
                 self.write_output_files(rdf, rpdf, pre="ranked")
