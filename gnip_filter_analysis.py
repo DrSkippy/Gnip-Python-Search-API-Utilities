@@ -11,10 +11,12 @@ import time
 import numbers
 import os
 import ConfigParser
+import logging
 try:
         from cStringIO import StringIO
 except:
         from StringIO import StringIO
+
 import pandas as pd
 import numpy as np
 
@@ -25,6 +27,12 @@ sys.stdout = codecs.getwriter('utf-8')(sys.stdout)
 sys.stdin = codecs.getreader('utf-8')(sys.stdin)
 
 DEFAULT_CONFIG_FILENAME = "./.gnip"
+LOG_FILE_PATH = os.path.join(".","time_series.log")
+
+# set up simple logging
+logging.basicConfig(filename=LOG_FILE_PATH,level=logging.DEBUG)
+logging.info("#"*70)
+logging.info("################# started {} #################".format(datetime.datetime.now()))
 
 class GnipSearchCMD():
 
@@ -51,7 +59,7 @@ class GnipSearchCMD():
                 self.stream_url = config_from_file.get('endpoint', 'url')
             except (ConfigParser.NoOptionError,
                     ConfigParser.NoSectionError) as e:
-                print >> sys.stderr, "Error reading configuration file ({}), ignoring configuration file.".format(e)
+                logging.warn("Error reading configuration file ({}), ignoring configuration file.".format(e))
         # parse the command line options
         self.options = self.args().parse_args()
         # set up the job
@@ -67,6 +75,7 @@ class GnipSearchCMD():
         if "data-api.twitter.com" in self.stream_url:
             self.options.search_v2 = True
         else:
+            logging.error("Requires search v2, but your URL appears to point to a v1 endpoint. Exiting.")
             print >> sys.stderr, "Requires search v2, but your URL appears to point to a v1 endpoint. Exiting."
             sys.exit(-1)
         # defaults
