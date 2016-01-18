@@ -108,6 +108,7 @@ class Results():
 
     def get_top_grams(self, n=20):
         self.freq = SimpleNGrams(char_upper_cutoff=20, tokenizer="twitter")
+        self.freq.sl.add_session_stop_list(["http", "https", "amp", "htt"])
         for x in self.query.get_list_set():
             self.freq.add(x[TEXT_INDEX])
         return self.freq.get_tokens(n) 

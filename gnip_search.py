@@ -23,7 +23,7 @@ class GnipSearchCMD():
 
     USE_CASES = ["json", "wordcount","users", "rate", "links", "timeline", "geo", "audience"]
     
-    def __init__(self, token_list_size=20):
+    def __init__(self, token_list_size=40):
         # default tokenizer and character limit
         char_upper_cutoff = 20  # longer than for normal words because of user names
         self.token_list_size = int(token_list_size)
