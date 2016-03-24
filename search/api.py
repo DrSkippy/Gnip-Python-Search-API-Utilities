@@ -252,8 +252,6 @@ class Query(object):
                     'query': pt_filter
             }
         self.rule_payload["maxResults"] = int(max_results)
-        if not self.search_v2:
-            self.rule_payload["publisher"] = "twitter"
         if start:
             self.rule_payload["fromDate"] = self.fromDate
         if end:
