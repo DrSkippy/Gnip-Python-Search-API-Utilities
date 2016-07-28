@@ -9,12 +9,16 @@ import time
 import os
 import re
 
-from api import *
+from .api import *
 from simple_n_grams.simple_n_grams import SimpleNGrams
 
-reload(sys)
-sys.stdout = codecs.getwriter('utf-8')(sys.stdout)
-sys.stdin = codecs.getreader('utf-8')(sys.stdin)
+if sys.version_info[0] < 3:
+    try:
+        reload(sys)
+        sys.stdout = codecs.getwriter('utf-8')(sys.stdout)
+        sys.stdin = codecs.getreader('utf-8')(sys.stdin)
+    except NameError:
+        pass
 
 #############################################
 # Some constants to configure column retrieval from TwacsCSV
@@ -81,7 +85,7 @@ class Results():
             if link_str != "GNIPEMPTYFIELD" and link_str != "None":
                 try:
                     exec("link_list=%s"%link_str)
-                except SyntaxError, e:
+                except SyntaxError as e:
                     print >> sys.stderr, "WARNING: Something isn't right with this list: %s skipping it..."%link_str
                     continue
                 for l in link_list:
@@ -184,15 +188,15 @@ if __name__ == "__main__":
     g = Results("shendrickson@gnip.com"
             , "XXXXXPASSWORDXXXXX"
             , "https://search.gnip.com/accounts/shendrickson/search/wayback.json")
-    list(g.get_time_series(pt_filter="bieber", count_bucket="hour"))
-    print unicode(g)
-    print list(g.get_activities(pt_filter="bieber", max_results = 10))
-    print list(g.get_geo(pt_filter = "bieber has:geo", max_results = 10))
-    print list(g.get_time_series(pt_filter="beiber", count_bucket="hour"))
-    print list(g.get_top_links(pt_filter="beiber", max_results=100, n=30))
-    print list(g.get_top_users(pt_filter="beiber", max_results=100, n=30))
-    print list(g.get_top_grams(pt_filter="bieber", max_results=100, n=50))
-    print list(g.get_frequency_items(10))
-    print unicode(g)
-    print g.get_rate()
+    #list(g.get_time_series(pt_filter="bieber", count_bucket="hour"))
+    print(g)
+    print( list(g.get_activities(pt_filter="bieber", max_results = 10)) )
+    print( list(g.get_geo(pt_filter = "bieber has:geo", max_results = 10)) )
+    print( list(g.get_time_series(pt_filter="beiber", count_bucket="hour")) )
+    print( list(g.get_top_links(pt_filter="beiber", max_results=100, n=30)) )
+    print( list(g.get_top_users(pt_filter="beiber", max_results=100, n=30)) )
+    print( list(g.get_top_grams(pt_filter="bieber", max_results=100, n=50)) )
+    print( list(g.get_frequency_items(10)) )
+    print(g)
+    print(g.get_rate())
     g.execute(pt_filter="bieber", query=True)
