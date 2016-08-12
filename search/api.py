@@ -14,9 +14,10 @@ import unicodedata
 
 from acscsv.twitter_acs import TwacsCSV
 
-reload(sys)
-sys.stdout = codecs.getwriter('utf-8')(sys.stdout)
-sys.stdin = codecs.getreader('utf-8')(sys.stdin)
+## update for python3
+#reload(sys)
+#sys.stdout = codecs.getwriter('utf-8')(sys.stdout)
+#sys.stdin = codecs.getreader('utf-8')(sys.stdin)
 
 #remove this
 requests.packages.urllib3.disable_warnings()
@@ -127,17 +128,17 @@ class Query(object):
                 sys.stderr.write("Exiting with HTTP error code {}\n".format(res.status_code))
                 sys.stderr.write("ERROR Message: {}\n".format(res.json()["error"]["message"]))
                 sys.exit(-1)
-        except requests.exceptions.ConnectionError, e:
+        except requests.exceptions.ConnectionError as e:
             e.msg = "Error (%s). Exiting without results."%str(e)
             raise e
-        except requests.exceptions.HTTPError, e:
+        except requests.exceptions.HTTPError as e:
             e.msg = "Error (%s). Exiting without results."%str(e)
             raise e
-        except requests.exceptions.MissingSchema, e:
+        except requests.exceptions.MissingSchema as e:
             e.msg = "Error (%s). Exiting without results."%str(e)
             raise e
         #Don't use res.text as it creates encoding challenges!
-        return unicode(res.content, "utf-8")
+        return(res.content.decode(res.encoding))
 
     def parse_responses(self, count_bucket):
         """Parse returned responses.
@@ -174,16 +175,16 @@ class Query(object):
                             acs = []
                         else:
                             # storing in memory, so give some feedback as to size
-                            print >>sys.stderr,"[%8d bytes] %5d total activities retrieved..."%(
+                            sys.stderr.write("[%8d bytes] %5d total activities retrieved...\n"%(
                                                                 sys.getsizeof(acs)
-                                                              , len(acs))
+                                                              , len(acs)))
                     else:
-                        print >> sys.stderr, "No results returned for rule:{0}".format(str(self.rule_payload))
+                        sys.stderr.write( "No results returned for rule:{0}\n".format(str(self.rule_payload)) ) 
                     if "next" in tmp_response:
                         self.rule_payload["next"]=tmp_response["next"]
                         repeat = True
                         page_count += 1
-                        print >> sys.stderr, "Fetching page {}...".format(page_count)
+                        sys.stderr.write( "Fetching page {}...\n".format(page_count) )
                     else:
                         if "next" in self.rule_payload:
                             del self.rule_payload["next"]
@@ -271,8 +272,8 @@ class Query(object):
             self.rule_payload["bucket"] = count_bucket
         # for testing, show the query JSON and stop
         if show_query:
-            print >>sys.stderr, "API query:"
-            print >>sys.stderr, self.rule_payload
+            sys.stderr.write("API query:\n")
+            sys.stderr.write(self.rule_payload + '\n')
             sys.exit() 
         # set up variable to catch the data in 3 formats
         self.time_series = []
@@ -343,12 +344,12 @@ if __name__ == "__main__":
             , "https://search.gnip.com/accounts/shendrickson/search/wayback.json")
     g.execute("bieber", 10)
     for x in g.get_activity_set():
-        print x
-    print g
-    print g.get_rate()
+        print(x)
+    print(g)
+    print(g.get_rate())
     g.execute("bieber", count_bucket = "hour")
-    print g
-    print len(g)
+    print(g)
+    print(len(g))
     pg = Query("shendrickson@gnip.com"
             , "XXXXXPASSWORDXXXXX"
             , "https://search.gnip.com/accounts/shendrickson/search/wayback.json"
@@ -359,5 +360,5 @@ if __name__ == "__main__":
             , end=now_date.strftime(TIME_FORMAT_LONG)
             , start=(now_date - datetime.timedelta(seconds=200)).strftime(TIME_FORMAT_LONG))
     for x in pg.get_activity_set():
-        print x
+        print(x)
     g.execute("bieber", show_query=True)

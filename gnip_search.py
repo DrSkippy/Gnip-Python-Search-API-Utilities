@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
-__author__="Scott Hendrickson, Josh Montague" 
+__author__="Scott Hendrickson, Jeff Kolb, Josh Montague" 
 
 import sys
 import json
@@ -9,13 +9,21 @@ import argparse
 import datetime
 import time
 import os
-import ConfigParser
 
-from search.results import *
+if sys.version_info.major == 2:
+    import ConfigParser as configparser
+else:
+    import configparser
 
-reload(sys)
-sys.stdout = codecs.getwriter('utf-8')(sys.stdout)
-sys.stdin = codecs.getreader('utf-8')(sys.stdin)
+from search.results import * 
+
+if (sys.version_info[0]) < 3:
+    try:
+        reload(sys)
+        sys.stdout = codecs.getwriter('utf-8')(sys.stdout)
+        sys.stdin = codecs.getreader('utf-8')(sys.stdin)
+    except NameError:
+        pass
 
 DEFAULT_CONFIG_FILENAME = "./.gnip"
 
@@ -44,12 +52,13 @@ class GnipSearchCMD():
                 self.user = config_from_file.get('creds', 'un')
                 self.password = config_from_file.get('creds', 'pwd')
                 self.stream_url = config_from_file.get('endpoint', 'url')
-            except (ConfigParser.NoOptionError,
-                    ConfigParser.NoSectionError) as e:
+            except (configparser.NoOptionError,
+                    configparser.NoSectionError) as e:
                 print >> sys.stderr, "Error reading configuration file ({}), ignoring configuration file.".format(e)
         # parse the command line options
         self.options = self.args().parse_args()
-        self.options.filter = self.options.filter.decode("utf-8")
+        if int(sys.version_info[0]) < 3:
+            self.options.filter = self.options.filter.decode("utf-8")
         # set up the job
         # over ride config file with command line args if present
         if self.options.user is not None:
@@ -63,11 +72,15 @@ class GnipSearchCMD():
         if "data-api.twitter.com" in self.stream_url:
             self.options.search_v2 = True
         elif self.options.search_v2:
-            print >> sys.stderr, "WARNING: You set the search v2 flag, but your URL appears to point to a v1 endpoint."
+            sys.stderr.write("WARNING: You set the search v2 flag, but your URL appears to point to a v1 endpoint.\n") 
             self.options.search_v2 = False
 
+        # Gnacs is not yet upgraded to python3, so don't allow CSV output option (which uses Gnacs) if python3
+        if self.options.csv_flag and sys.version_info.major == 3:
+            raise ValueError("CSV option not yet available for Python3")
+
     def config_file(self):
-        config = ConfigParser.ConfigParser()
+        config = configparser.ConfigParser()
         # (1) default file name precidence
         config.read(DEFAULT_CONFIG_FILENAME)
         if not config.has_section("creds"):
@@ -180,7 +193,7 @@ class GnipSearchCMD():
                     if self.options.csv_flag:
                         try:
                             res.append("{},{},{},{}".format(x["id"], x["postedTime"], x["longitude"], x["latitude"]))
-                        except KeyError, e:
+                        except KeyError as e:
                             print >> sys.stderr, str(e)
                     else:
                         res.append(json.dumps(x))
@@ -221,4 +234,4 @@ class GnipSearchCMD():
 
 if __name__ == "__main__":
     g = GnipSearchCMD()
-    print unicode(g.get_result())
+    print(g.get_result())

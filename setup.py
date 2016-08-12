@@ -7,13 +7,13 @@ setup(
     author_email='scott@drskippy.net',
     packages=['search'],
     scripts=['gnip_search.py', 'gnip_time_series.py'],
-    url='https://github.com/DrSkippy27/Gnip-Python-Search-API-Utilities',
-    download_url='https://github.com/DrSkippy27/Gnip-Python-Search-API-Utilities/tags/',
+    url='https://github.com/DrSkippy/Gnip-Python-Search-API-Utilities',
+    download_url='https://github.com/DrSkippy/Gnip-Python-Search-API-Utilities/tags/',
     license='LICENSE.txt',
-    description='Simple utilties to to explore the Gnip search API',
+    description='Simple utilties to explore the Gnip search API',
     install_requires=[
-        "gnacs >= 1.0.0"
-        , "sngrams >= 0.1.5"
+        "gnacs >= 1.1.0"
+        , "sngrams >= 0.2.0"
         , "requests > 2.4.0"
         ],
     extras_require = {
