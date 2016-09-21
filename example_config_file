@@ -9,7 +9,7 @@ pwd = <password>
 
 [endpoint]
 # replace with your endpoint
-url = https://search.gnip.com/accounts/shendrickson/search/wayback.json
+url = https://gnip-api.twitter.com/search/30day/accounts/shendrickson/wayback.json
 
 [defaults]
 # none

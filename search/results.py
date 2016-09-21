@@ -187,7 +187,7 @@ class Results():
 if __name__ == "__main__":
     g = Results("shendrickson@gnip.com"
             , "XXXXXPASSWORDXXXXX"
-            , "https://search.gnip.com/accounts/shendrickson/search/wayback.json")
+            , "https://gnip-api.twitter.com/search/30day/accounts/shendrickson/wayback.json")
     #list(g.get_time_series(pt_filter="bieber", count_bucket="hour"))
     print(g)
     print( list(g.get_activities(pt_filter="bieber", max_results = 10)) )

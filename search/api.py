@@ -339,7 +339,7 @@ class Query(object):
 if __name__ == "__main__":
     g = Query("shendrickson@gnip.com"
             , "XXXXXPASSWORDXXXXX"
-            , "https://search.gnip.com/accounts/shendrickson/search/wayback.json")
+            , "https://gnip-api.twitter.com/search/30day/accounts/shendrickson/wayback.json")
     g.execute("bieber", 10)
     for x in g.get_activity_set():
         print(x)
@@ -350,7 +350,7 @@ if __name__ == "__main__":
     print(len(g))
     pg = Query("shendrickson@gnip.com"
             , "XXXXXPASSWORDXXXXX"
-            , "https://search.gnip.com/accounts/shendrickson/search/wayback.json"
+            , "https://gnip-api.twitter.com/search/30day/accounts/shendrickson/wayback.json"
             , paged = True 
             , output_file_path = "../data/")
     now_date = datetime.datetime.now()
