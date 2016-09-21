@@ -16,10 +16,10 @@ class TestQuery(unittest.TestCase):
     def setUp(self):
         self.g = Query("shendrickson@gnip.com"
             , "XXXXXXXXX"
-            , "https://search.gnip.com/accounts/shendrickson/search/wayback.json")
+            , "https://gnip-api.twitter.com/search/30day/accounts/shendrickson/wayback.json")
         self.g_paged = Query("shendrickson@gnip.com"
             , "XXXXXXXXX"
-            , "https://search.gnip.com/accounts/shendrickson/search/wayback.json"
+            , "https://gnip-api.twitter.com/search/30day/accounts/shendrickson/wayback.json"
             , paged = True
             , output_file_path = ".")
 

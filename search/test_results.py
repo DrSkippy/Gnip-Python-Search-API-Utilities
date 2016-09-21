@@ -19,7 +19,7 @@ class TestResults(unittest.TestCase):
         self.params = { 
               "user":"shendrickson@gnip.com"
             , "password":"XXXXXXXXX"
-            , "stream_url":"https://search.gnip.com/accounts/shendrickson/search/wayback.json" 
+            , "stream_url":"https://gnip-api.twitter.com/search/30day/accounts/shendrickson/wayback.json" 
             }
 
     def tearDown(self):

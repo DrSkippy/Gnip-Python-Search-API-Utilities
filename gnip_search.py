@@ -71,9 +71,8 @@ class GnipSearchCMD():
         # Search v2 uses a different url
         if "gnip-api.twitter.com" in self.stream_url:
             self.options.search_v2 = True
-        elif self.options.search_v2:
-            sys.stderr.write("WARNING: You set the search v2 flag, but your URL appears to point to a v1 endpoint.\n") 
-            self.options.search_v2 = False
+        else:
+            raise Exception("Error: Your URL appears to point to a deprecated version 1.0 endpoint. Please provide a version 2.0 endpoint.\n")
 
         # Gnacs is not yet upgraded to python3, so don't allow CSV output option (which uses Gnacs) if python3
         if self.options.csv_flag and sys.version_info.major == 3:
