@@ -54,7 +54,7 @@ class GnipSearchCMD():
                 self.stream_url = config_from_file.get('endpoint', 'url')
             except (configparser.NoOptionError,
                     configparser.NoSectionError) as e:
-                print >> sys.stderr, "Error reading configuration file ({}), ignoring configuration file.".format(e)
+                sys.stderr.write("Error reading configuration file ({}), ignoring configuration file.".format(e))
         # parse the command line options
         self.options = self.args().parse_args()
         if int(sys.version_info[0]) < 3:
@@ -69,7 +69,7 @@ class GnipSearchCMD():
             self.stream_url = self.options.stream_url
         #
         # Search v2 uses a different url
-        if "data-api.twitter.com" in self.stream_url:
+        if "gnip-api.twitter.com" in self.stream_url:
             self.options.search_v2 = True
         elif self.options.search_v2:
             sys.stderr.write("WARNING: You set the search v2 flag, but your URL appears to point to a v1 endpoint.\n") 
