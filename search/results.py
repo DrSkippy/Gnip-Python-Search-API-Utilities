@@ -79,7 +79,7 @@ class Results():
     def get_top_links(self, n=20):
         """Returns the links most shared in the data set retrieved in
            the order of how many times each was shared."""
-        self.freq = SimpleNGrams(char_upper_cutoff=100, tokenizer="space", )
+        self.freq = SimpleNGrams(char_upper_cutoff=100, tokenizer="space")
         for x in self.query.get_list_set():
             link_str = x[LINKS_INDEX]
             if link_str != "GNIPEMPTYFIELD" and link_str != "None":
