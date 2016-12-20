@@ -83,13 +83,7 @@ class Results():
         for x in self.query.get_list_set():
             link_str = x[LINKS_INDEX]
             if link_str != "GNIPEMPTYFIELD" and link_str != "None":
-                try:
-                    exec("link_list=%s"%link_str)
-                except SyntaxError as e:
-                    print >> sys.stderr, "WARNING: Something isn't right with this list: %s skipping it..."%link_str
-                    continue
-                for l in link_list:
-                    self.freq.add(l)
+                self.freq.add(link_str)
             else:
                 self.freq.add("NoLinks")
         return self.freq.get_tokens(n)

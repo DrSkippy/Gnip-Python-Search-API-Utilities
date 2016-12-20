@@ -15,9 +15,10 @@ import unicodedata
 from acscsv.twitter_acs import TwacsCSV
 
 ## update for python3
-#reload(sys)
-#sys.stdout = codecs.getwriter('utf-8')(sys.stdout)
-#sys.stdin = codecs.getreader('utf-8')(sys.stdin)
+if sys.version_info[0] == 2:
+    reload(sys)
+    sys.stdout = codecs.getwriter('utf-8')(sys.stdout)
+    sys.stdin = codecs.getreader('utf-8')(sys.stdin)
 
 #remove this
 requests.packages.urllib3.disable_warnings()
@@ -127,6 +128,9 @@ class Query(object):
             if res.status_code != 200:
                 sys.stderr.write("Exiting with HTTP error code {}\n".format(res.status_code))
                 sys.stderr.write("ERROR Message: {}\n".format(res.json()["error"]["message"]))
+                if 1==1: #self.return_incomplete:
+                    sys.stderr.write("Returning incomplete dataset.")
+                    return(res.content.decode(res.encoding))
                 sys.exit(-1)
         except requests.exceptions.ConnectionError as e:
             e.msg = "Error (%s). Exiting without results."%str(e)
@@ -271,7 +275,7 @@ class Query(object):
         # for testing, show the query JSON and stop
         if show_query:
             sys.stderr.write("API query:\n")
-            sys.stderr.write(self.rule_payload + '\n')
+            sys.stderr.write(json.dumps(self.rule_payload) + '\n')
             sys.exit() 
         # set up variable to catch the data in 3 formats
         self.time_series = []

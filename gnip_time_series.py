@@ -11,7 +11,8 @@
 #######################################################
 __author__="Scott Hendrickson" 
 
-import ConfigParser
+# other imports
+import sys
 import argparse
 import calendar
 import codecs
@@ -27,16 +28,24 @@ import pandas as pd
 import re
 import statsmodels.api as sm
 import string
-import sys
 import time
 from functools import partial
 from operator import itemgetter
 from scipy import signal
 from search.results import *
 
-reload(sys)
-sys.stdout = codecs.getwriter('utf-8')(sys.stdout)
-sys.stdin = codecs.getreader('utf-8')(sys.stdin)
+# handle Python 3 specific imports
+if sys.version_info[0] == 2:
+    import ConfigParser
+elif sys.version_info[0] == 3:
+    import configparser as ConfigParser
+    #from imp import reload
+
+# Python 2 specific setup (Py3 the utf-8 stuff is handled)
+if sys.version_info[0] == 2:
+    reload(sys)
+    sys.stdin = codecs.getreader('utf-8')(sys.stdin)
+    sys.stdout = codecs.getwriter('utf-8')(sys.stdout)
 
 # basic defaults
 FROM_PICKLE = False
@@ -109,8 +118,10 @@ class GnipSearchTimeseries():
                 logging.warn("Error reading configuration file ({}), ignoring configuration file.".format(e))
         # parse the command line options
         self.options = self.args().parse_args()
-        self.options.filter = self.options.filter.decode("utf-8")
-        self.options.second_filter = self.options.second_filter.decode("utf-8")
+        # decode step should not be included for python 3
+        if sys.version_info[0] == 2: 
+            self.options.filter = self.options.filter.decode("utf-8")
+            self.options.second_filter = self.options.second_filter.decode("utf-8")
         # set up the job
         # over ride config file with command line args if present
         if self.options.user is not None:
@@ -571,7 +582,7 @@ class GnipSearchTimeseries():
                 logging.info("creating n-grams dotplot for peak {}".format(n))
                 path = os.path.join(PLOTS_PREFIX, "{}_{}_{}.{}".format(filter_prefix_name, "peak", n, out_type))
                 self.dotplot(x, labels, path)
-            except ValueError, e:
+            except ValueError as e:
                 logging.error("{} - plot path={} skipped".format(e, path))
         ######################
         # x vs y scatter plot for correlations 
