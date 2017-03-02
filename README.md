@@ -16,12 +16,12 @@ Usage:
 $ gnip_search.py -h
 <pre>
 usage: gnip_search.py [-h] [-a] [-c] [-b COUNT_BUCKET] [-e END] [-f FILTER]
-                      [-l STREAM_URL] [-n MAX] [-p PASSWORD] [-q] [-s START]
-                      [-u USER] [-w OUTPUT_FILE_PATH] [-t]
+                      [-l STREAM_URL] [-n MAX] [-N HARD_MAX] [-p PASSWORD]
+                      [-q] [-s START] [-u USER] [-w OUTPUT_FILE_PATH] [-t]
                       USE_CASE
 
 GnipSearch supports the following use cases: ['json', 'wordcount', 'users',
-'rate', 'links', 'timeline', 'geo']
+'rate', 'links', 'timeline', 'geo', 'audience']
 
 positional arguments:
   USE_CASE              Use case for this search.
@@ -43,7 +43,10 @@ optional arguments:
   -l STREAM_URL, --stream-url STREAM_URL
                         Url of search endpoint. (See your Gnip console.)
   -n MAX, --results-max MAX
-                        Maximum results to return (default 100)
+                        Maximum results to return per page (default 100; max
+                        500)
+  -N HARD_MAX, --hard-max HARD_MAX
+                        Maximum results to return for all pages; see -a option
   -p PASSWORD, --password PASSWORD
                         Password
   -q, --query           View API query (no data)
