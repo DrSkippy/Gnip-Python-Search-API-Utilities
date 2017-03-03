@@ -259,7 +259,7 @@ class Query(object):
             self.rule_payload["fromDate"] = self.fromDate
         if end:
             self.rule_payload["toDate"] = self.toDate
-        # use teh proper endpoint url
+        # use the proper endpoint url
         self.stream_url = self.end_point
         if count_bucket:
             if not self.end_point.endswith("counts.json"): 
@@ -267,6 +267,7 @@ class Query(object):
             if count_bucket not in ['day', 'minute', 'hour']:
                 raise ValueError("Error. Invalid count bucket: %s \n"%str(count_bucket))
             self.rule_payload["bucket"] = count_bucket
+            self.rule_payload.pop("maxResults",None)
         # for testing, show the query JSON and stop
         if show_query:
             sys.stderr.write("API query:\n")
