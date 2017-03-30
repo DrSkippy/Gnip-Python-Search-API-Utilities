@@ -132,7 +132,7 @@ class GnipSearchTimeseries():
             self.stream_url = self.options.stream_url
         
         # search v2 uses a different url
-        if "data-api.twitter.com" not in self.stream_url:
+        if "gnip-api.twitter.com" not in self.stream_url:
             logging.error("gnipSearch timeline tools require Search V2. Exiting.")
             sys.stderr.write("gnipSearch timeline tools require Search V2. Exiting.\n")
             sys.exit(-1)
@@ -466,7 +466,7 @@ class GnipSearchTimeseries():
         if len(x) <= 1 or len(labels) <= 1:
             raise ValueError("cannot make a dot plot with only 1 point")
         # split n_gram_counts into 2 data sets
-        n = len(labels)/2
+        n = int(len(labels)/2)
         x1, x2 = x[:n], x[n:]
         labels1, labels2 = labels[:n], labels[n:]
         # create enough equally spaced y values for the horizontal lines
