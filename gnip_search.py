@@ -67,12 +67,6 @@ class GnipSearchCMD():
             self.password = self.options.password
         if self.options.stream_url is not None:
             self.stream_url = self.options.stream_url
-        #
-        # Search v2 uses a different url
-        if "gnip-api.twitter.com" in self.stream_url:
-            self.options.search_v2 = True
-        else:
-            raise Exception("Error: Your URL appears to point to a deprecated version 1.0 endpoint. Please provide a version 2.0 endpoint.\n")
 
         # Gnacs is not yet upgraded to python3, so don't allow CSV output option (which uses Gnacs) if python3
         if self.options.csv_flag and sys.version_info.major == 3:
@@ -114,7 +108,9 @@ class GnipSearchCMD():
                 default=None,
                 help="Url of search endpoint. (See your Gnip console.)")
         twitter_parser.add_argument("-n", "--results-max", dest="max", default=100, 
-                help="Maximum results to return (default 100)")
+                help="Maximum results to return per page (default 100; max 500)")
+        twitter_parser.add_argument("-N", "--hard-max", dest="hard_max", default=None, type=int,
+                help="Maximum results to return for all pages; see -a option")
         twitter_parser.add_argument("-p", "--password", dest="password", default=None, 
                 help="Password")
         twitter_parser.add_argument("-q", "--query", dest="query", action="store_true", 
@@ -149,7 +145,7 @@ class GnipSearchCMD():
                 , end=self.options.end
                 , count_bucket=self.options.count_bucket
                 , show_query=self.options.query
-                , search_v2=self.options.search_v2
+                , hard_max=self.options.hard_max
                 )
             res = []
             if self.options.csv_flag:
@@ -172,7 +168,7 @@ class GnipSearchCMD():
                 , end=self.options.end
                 , count_bucket=None
                 , show_query=self.options.query
-                , search_v2=self.options.search_v2
+                , hard_max=self.options.hard_max
                 )
             if self.options.use_case.startswith("rate"):
                 rate = self.results.query.get_rate()

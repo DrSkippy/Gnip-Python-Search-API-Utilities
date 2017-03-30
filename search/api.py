@@ -41,8 +41,7 @@ class Query(object):
             , stream_url
             , paged = False
             , output_file_path = None
-            , search_v2 = False
-            , hard_max = 500000
+            , hard_max = None
             ):
         """A Query requires at least a valid user name, password and endpoint url.
            The URL of the endpoint should be the JSON records endpoint, not the counts
@@ -67,7 +66,6 @@ class Query(object):
         # get a parser for the twitter columns
         # TODO: use the updated retriveal methods in gnacs instead of this?
         self.twitter_parser = TwacsCSV(",", None, False, True, False, True, False, False, False)
-        self.search_v2 = search_v2
         # Flag for post processing tweet timeline from tweet times
         self.tweet_times_flag = False
 
@@ -161,9 +159,9 @@ class Query(object):
                 acs.extend(tmp_response["results"])
             else:
                 raise ValueError("Invalid request\nQuery: %s\nResponse: %s"%(self.rule_payload, doc))
-            if len(acs) < self.hard_max:
+            if self.hard_max is None or len(acs) < self.hard_max:
                 repeat = False
-                if self.paged or (count_bucket and self.search_v2):
+                if self.paged or count_bucket:
                     if len(acs) > 0:
                         if self.output_file_path is not None:
                             # writing to file
@@ -179,7 +177,7 @@ class Query(object):
                             acs = []
                         else:
                             # storing in memory, so give some feedback as to size
-                            sys.stderr.write("[%8d bytes] %5d total activities retrieved...\n"%(
+                            sys.stderr.write("[{0:8d} bytes] {1:5d} total activities retrieved...\n".format(
                                                                 sys.getsizeof(acs)
                                                               , len(acs)))
                     else:
@@ -261,17 +259,15 @@ class Query(object):
             self.rule_payload["fromDate"] = self.fromDate
         if end:
             self.rule_payload["toDate"] = self.toDate
-        # use teh proper endpoint url
+        # use the proper endpoint url
         self.stream_url = self.end_point
         if count_bucket:
-            # remove "maxResults parameter for search v2 queries to counts endpoint
-            if self.search_v2:
-                del self.rule_payload["maxResults"]
             if not self.end_point.endswith("counts.json"): 
                 self.stream_url = self.end_point[:-5] + "/counts.json"
             if count_bucket not in ['day', 'minute', 'hour']:
                 raise ValueError("Error. Invalid count bucket: %s \n"%str(count_bucket))
             self.rule_payload["bucket"] = count_bucket
+            self.rule_payload.pop("maxResults",None)
         # for testing, show the query JSON and stop
         if show_query:
             sys.stderr.write("API query:\n")
