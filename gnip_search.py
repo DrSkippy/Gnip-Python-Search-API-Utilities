@@ -68,6 +68,11 @@ class GnipSearchCMD():
         if self.options.stream_url is not None:
             self.stream_url = self.options.stream_url
 
+        # exit if the config file isn't set
+        if (self.stream_url is None) or (self.user is None) or (self.password is None):
+            sys.stderr.write("Something is wrong with your configuration. It's possible that the we can't find your config file.")
+            sys.exit(-1)
+
         # Gnacs is not yet upgraded to python3, so don't allow CSV output option (which uses Gnacs) if python3
         if self.options.csv_flag and sys.version_info.major == 3:
             raise ValueError("CSV option not yet available for Python3")
