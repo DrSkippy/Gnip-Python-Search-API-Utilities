@@ -34,6 +34,10 @@ from operator import itemgetter
 from scipy import signal
 from search.results import *
 
+# fixes an annoying warning that scipy is throwing 
+import warnings
+warnings.filterwarnings(action="ignore", module="scipy", message="^internal gelsd driver lwork query error")
+
 # handle Python 3 specific imports
 if sys.version_info[0] == 2:
     import ConfigParser
@@ -132,9 +136,11 @@ class GnipSearchTimeseries():
             self.stream_url = self.options.stream_url
         
         # search v2 uses a different url
-        if "data-api.twitter.com" not in self.stream_url:
+        if "gnip-api.twitter.com" not in self.stream_url:
             logging.error("gnipSearch timeline tools require Search V2. Exiting.")
+            logging.error("Your URL should look like: https://gnip-api.twitter.com/search/fullarchive/accounts/<account>/dev.json")
             sys.stderr.write("gnipSearch timeline tools require Search V2. Exiting.\n")
+            sys.stderr.write("Your URL should look like: https://gnip-api.twitter.com/search/fullarchive/accounts/<account>/dev.json")
             sys.exit(-1)
 
         # set some options that should not be changed for this anaysis
@@ -238,10 +244,12 @@ class GnipSearchTimeseries():
             , end=self.options.end
             , count_bucket=self.options.count_bucket
             , show_query=self.options.query
-            , search_v2=self.options.search_v2
             )
         # sort by date
         res_timeseries = sorted(results_timeseries.get_time_series(), key = itemgetter(0))
+        # if we only have one activity, probably don't do all of this
+        if len(res_timeseries) <= 1:
+            raise ValueError("You've only pulled {} Tweets. time series analysis isn't what you want.".format(len(res_timeseries)))
         # calculate total time interval span
         time_min_date = min(res_timeseries, key = itemgetter(2))[2]
         time_max_date = max(res_timeseries, key = itemgetter(2))[2]
@@ -282,7 +290,6 @@ class GnipSearchTimeseries():
                 , end=self.options.end
                 , count_bucket=self.options.count_bucket
                 , show_query=self.options.query
-                , search_v2=self.options.search_v2
                 )
             # sort by date
             second_res_timeseries = sorted(results_timeseries.get_time_series(), key = itemgetter(0))
@@ -449,7 +456,6 @@ class GnipSearchTimeseries():
                     , end=de
                     , count_bucket=None
                     , show_query=self.options.query
-                    , search_v2=self.options.search_v2
                     , hard_max = TWEET_SAMPLE
                     )
                 logging.info("retrieved {} records".format(len(res)))
@@ -466,7 +472,7 @@ class GnipSearchTimeseries():
         if len(x) <= 1 or len(labels) <= 1:
             raise ValueError("cannot make a dot plot with only 1 point")
         # split n_gram_counts into 2 data sets
-        n = len(labels)/2
+        n = int(len(labels)/2)
         x1, x2 = x[:n], x[n:]
         labels1, labels2 = labels[:n], labels[n:]
         # create enough equally spaced y values for the horizontal lines
@@ -543,13 +549,16 @@ class GnipSearchTimeseries():
         ######################
         # moving avg
         ######################
-        df2 = pd.DataFrame({"moving":ts.moving}, index=ts.dates[:len(ts.moving)])
-        df2.plot()
-        plt.ylabel("Counts")
-        plt.title(filter_prefix_name)
-        plt.tight_layout()
-        plt.savefig(os.path.join(PLOTS_PREFIX, '{}_{}.{}'.format(filter_prefix_name, "mov_avg_line", out_type)))
-        plt.close("all")
+        if len(ts.moving) <= 3:
+            logging.warn("Too little data for a moving average")
+        else:
+            df2 = pd.DataFrame({"moving":ts.moving}, index=ts.dates[:len(ts.moving)])
+            df2.plot()
+            plt.ylabel("Counts")
+            plt.title(filter_prefix_name)
+            plt.tight_layout()
+            plt.savefig(os.path.join(PLOTS_PREFIX, '{}_{}.{}'.format(filter_prefix_name, "mov_avg_line", out_type)))
+            plt.close("all")
         ######################
         # timeline with peaks marked by vertical bands
         ######################
